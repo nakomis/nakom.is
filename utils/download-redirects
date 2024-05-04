@@ -1,0 +1,1 @@
+aws dynamodb scan --table-name redirects --no-paginate --profile nis > data.json

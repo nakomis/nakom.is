@@ -1,0 +1,1 @@
+cat data.json | jq -c '.Items[]' | while read -r line; do aws dynamodb put-item --table-name redirects --profile nakom.is --item "$line" --condition-expression "attribute_not_exists(shortPath)"; done

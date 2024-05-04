@@ -1,0 +1,424 @@
+{
+    "Items": [
+        {
+            "url": {
+                "S": "http://homeassistant.local:4357/"
+            },
+            "shortPath": {
+                "S": "has"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "https://nakomis.signin.aws.amazon.com/console"
+            },
+            "shortPath": {
+                "S": "awsman"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.theguardian.com/uk"
+            },
+            "shortPath": {
+                "S": "gn"
+            },
+            "hitCount": {
+                "N": "5"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.nytimes.com/games/wordle/index.html"
+            },
+            "shortPath": {
+                "S": "nytwordle"
+            },
+            "hitCount": {
+                "N": "2"
+            }
+        },
+        {
+            "url": {
+                "S": "http://calendar.nakomis.com"
+            },
+            "shortPath": {
+                "S": "calendar"
+            },
+            "hitCount": {
+                "N": "5"
+            }
+        },
+        {
+            "url": {
+                "S": "https://nakomisaws.awsapps.com/start"
+            },
+            "shortPath": {
+                "S": "aws"
+            },
+            "hitCount": {
+                "N": "14"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.foxnews.com/"
+            },
+            "shortPath": {
+                "S": "fn"
+            },
+            "hitCount": {
+                "N": "2"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.independent.co.uk/"
+            },
+            "shortPath": {
+                "S": "i"
+            },
+            "hitCount": {
+                "N": "6"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.bbc.co.uk/news"
+            },
+            "shortPath": {
+                "S": "news"
+            },
+            "hitCount": {
+                "N": "12"
+            }
+        },
+        {
+            "url": {
+                "S": "https://docs.google.com/spreadsheets/d/1RoP_DxdEQgNKpzDmGMRCnxXFDpPkahpYEW7OMwyclHw/edit#gid=0"
+            },
+            "shortPath": {
+                "S": "fit"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "https://http.cat/"
+            },
+            "shortPath": {
+                "S": "cat"
+            },
+            "hitCount": {
+                "N": "3"
+            }
+        },
+        {
+            "url": {
+                "S": "https://chmod-calculator.com/"
+            },
+            "shortPath": {
+                "S": "chmod"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "https://homeassistant.nakomis.com"
+            },
+            "shortPath": {
+                "S": "ha"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.motherjones.com/"
+            },
+            "shortPath": {
+                "S": "mj"
+            },
+            "hitCount": {
+                "N": "15"
+            }
+        },
+        {
+            "url": {
+                "S": "https://fast.com/"
+            },
+            "shortPath": {
+                "S": "f"
+            },
+            "hitCount": {
+                "N": "3"
+            }
+        },
+        {
+            "url": {
+                "S": "https://amzn.eu/d/dRUfgPe"
+            },
+            "shortPath": {
+                "S": "jury"
+            },
+            "hitCount": {
+                "N": "4"
+            }
+        },
+        {
+            "url": {
+                "S": "https://app.any.do/tasks/lists/ABzKDzH3CwkN86UQzj9U7Zih"
+            },
+            "shortPath": {
+                "S": "ad"
+            },
+            "hitCount": {
+                "N": "2"
+            }
+        },
+        {
+            "url": {
+                "S": "https://edition.cnn.com/"
+            },
+            "shortPath": {
+                "S": "cnn"
+            },
+            "hitCount": {
+                "N": "2"
+            }
+        },
+        {
+            "url": {
+                "S": "https://en.wikipedia.org/wiki/Main_Page"
+            },
+            "shortPath": {
+                "S": "wiki"
+            },
+            "hitCount": {
+                "N": "3"
+            }
+        },
+        {
+            "url": {
+                "S": "https://app.juul.co.uk/"
+            },
+            "shortPath": {
+                "S": "juul"
+            },
+            "hitCount": {
+                "N": "3"
+            }
+        },
+        {
+            "url": {
+                "S": "https://en.wikipedia.org/wiki/Maine_Coon"
+            },
+            "shortPath": {
+                "S": "Mu"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.google.co.uk/"
+            },
+            "shortPath": {
+                "S": "google"
+            },
+            "hitCount": {
+                "N": "1531"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.bbc.co.uk/weather/eh4"
+            },
+            "shortPath": {
+                "S": "w"
+            },
+            "hitCount": {
+                "N": "62"
+            }
+        },
+        {
+            "url": {
+                "S": "https://start.spring.io/"
+            },
+            "shortPath": {
+                "S": "sb"
+            },
+            "hitCount": {
+                "N": "3"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.amazon.co.uk/"
+            },
+            "shortPath": {
+                "S": "az"
+            },
+            "hitCount": {
+                "N": "0"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.amazon.co.uk/gp/video/mystuff/library/all/ref=atv_mys_yvl_tab"
+            },
+            "shortPath": {
+                "S": "pv"
+            },
+            "hitCount": {
+                "N": "3"
+            }
+        },
+        {
+            "url": {
+                "S": "https://play.unity.com/discover/mygames"
+            },
+            "shortPath": {
+                "S": "up"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "http://drive.nakomis.com"
+            },
+            "shortPath": {
+                "S": "drive"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "calendar.nakomis.com"
+            },
+            "shortPath": {
+                "S": "cal"
+            },
+            "hitCount": {
+                "N": "1"
+            }
+        },
+        {
+            "url": {
+                "S": "https://cad.onshape.com/documents?nodeId=2&resourceType=filter"
+            },
+            "shortPath": {
+                "S": "o"
+            },
+            "hitCount": {
+                "N": "26"
+            }
+        },
+        {
+            "url": {
+                "S": "console.aws.amazon.com"
+            },
+            "shortPath": {
+                "S": "console"
+            },
+            "hitCount": {
+                "N": "5"
+            }
+        },
+        {
+            "url": {
+                "S": "http://mail.nakomis.com"
+            },
+            "shortPath": {
+                "S": "mail"
+            },
+            "hitCount": {
+                "N": "6"
+            }
+        },
+        {
+            "url": {
+                "S": "facebook.com"
+            },
+            "shortPath": {
+                "S": "fb"
+            },
+            "hitCount": {
+                "N": "8"
+            }
+        },
+        {
+            "url": {
+                "S": "github.com"
+            },
+            "shortPath": {
+                "S": "g"
+            },
+            "hitCount": {
+                "N": "3"
+            }
+        },
+        {
+            "url": {
+                "S": "www.huffpost.com/?country=US"
+            },
+            "shortPath": {
+                "S": "hp"
+            },
+            "hitCount": {
+                "N": "26"
+            }
+        },
+        {
+            "url": {
+                "S": "https://www.isnic.is/en/contact/my"
+            },
+            "shortPath": {
+                "S": "isnic"
+            },
+            "hitCount": {
+                "N": "0"
+            }
+        },
+        {
+            "url": {
+                "S": "http://localhost:8080/h2-console"
+            },
+            "shortPath": {
+                "S": "h2"
+            },
+            "hitCount": {
+                "N": "2"
+            }
+        },
+        {
+            "url": {
+                "S": "https://apnews.com/"
+            },
+            "shortPath": {
+                "S": "ap"
+            },
+            "hitCount": {
+                "N": "40"
+            }
+        }
+    ],
+    "Count": 45,
+    "ScannedCount": 45
+}
