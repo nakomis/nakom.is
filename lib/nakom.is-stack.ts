@@ -27,6 +27,37 @@ export class NakomIsStack extends cdk.Stack {
       restApiName: 'nakom.is'
     });
 
+    // root resource
+    const rootIntegration = new api.MockIntegration({
+      integrationResponses: [
+        {
+          statusCode: "301",
+          contentHandling: api.ContentHandling.CONVERT_TO_TEXT,
+          responseTemplates: {
+            'application/json': ''
+          },
+          responseParameters: {
+            "method.response.header.Location": "'https://www.google.co.uk/'"
+          }
+        }
+      ],
+      requestTemplates: {
+        'application/json': '{"statusCode": 200}'
+      }
+    });
+
+    const getRoot = gateway.root.addMethod('GET', rootIntegration, {
+      methodResponses: [
+        {
+          responseParameters: {
+            "method.response.header.Location": true
+          },
+          statusCode: '301'
+        }
+      ]
+    });
+
+    // robots.txt
     const robotsIntegration = new api.MockIntegration({
       integrationResponses: [
         {
