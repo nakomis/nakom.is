@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import { AttributeType, TableV2 } from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as api from 'aws-cdk-lib/aws-apigateway';
+import { Role } from 'aws-cdk-lib/aws-iam';
 
 
 export class NakomIsStack extends cdk.Stack {
@@ -90,22 +91,112 @@ export class NakomIsStack extends cdk.Stack {
       ]
     });
 
+    // FIXME: Create the role as part of this stack
+    const myrole = Role.fromRoleArn(this, "S3Role", "arn:aws:iam::637423226886:role/MHnakom.isReadS3");
+
     // Static files
     const staticResource = gateway.root.addResource('static');
     const staticFileResource = staticResource.addResource('{file+}');
 
+
     const staticFileIntegration = new api.AwsIntegration({
       service: "s3",
-      region: "eu-west-2",
-      integrationHttpMethod: "GET",
       path: "mhtestfornakom.is/{abc}",
       options: {
+        passthroughBehavior: api.PassthroughBehavior.WHEN_NO_MATCH,
         requestParameters: {
-          "abc": "method.request.path.file"
-        }
-      }
+          "integration.request.path.abc": 'method.request.path.file'
+        },
+        integrationResponses: [{
+          statusCode: "200",
+          responseParameters: {
+            'method.response.header.Content-Length': 'integration.response.header.Content-Length',
+            'method.response.header.Content-Type': 'integration.response.header.Content-Type'
+          }
+        }],
+        credentialsRole: myrole
+      },
+      region: "eu-west-2",
+      integrationHttpMethod: "GET",
     });
 
-    const getStaticFile = staticFileResource.addMethod('GET', staticFileIntegration)
+    const getStaticFile = staticFileResource.addMethod('GET', staticFileIntegration, {
+      requestParameters: {
+        'method.request.path.file': true
+      },
+      methodResponses: [{
+        statusCode: "200",
+        responseParameters: {
+          'method.response.header.Content-Length': false,
+          'method.response.header.Content-Type': false
+        },
+        responseModels: {
+          "application/json": {
+            modelId: "Empty"
+          }
+        }
+      }]
+    });
+
+
+    // let awsS3IntegrationFolderItemHeadProps = new api.AwsIntegration({
+    //   service: 's3',
+    //   path: '{bucket}/{object}',
+    //   options: {
+    //     passthroughBehavior: api.PassthroughBehavior.WHEN_NO_MATCH,
+    //     credentialsRole: this.apiGatewayRole,
+    //     requestParameters: {
+    //       'integration.request.path.bucket': 'method.request.path.folder',
+    //       'integration.request.path.object': 'method.request.path.item'
+    //     },
+    //     integrationResponses: [{
+    //         statusCode: "200",
+    //         responseParameters: {
+    //           'method.response.header.Content-Length': 'integration.response.header.Content-Length',
+    //           'method.response.header.Content-Type': 'integration.response.header.Content-Type'
+    //         }
+    //       },
+    //       {
+    //         statusCode: "400",
+    //         selectionPattern: "4\\d{2}"
+    //       },
+    //       {
+    //         statusCode: "500",
+    //         selectionPattern: "5\\d{2}"
+    //       }
+    //     ]
+    //   },
+    //   integrationHttpMethod: "HEAD"
+    // })
+
+    // let apiGatewayResourceItemHead = this.apiGatewayResourceItem.addMethod("HEAD",awsS3IntegrationFolderItemHeadProps,methodOptionFolderItemHeadProps)
+
+    // let methodOptionFolderItemHeadProps = {
+    //   authorizationType: api.AuthorizationType.IAM,
+    //   requestParameters: {
+    //     'method.request.path.folder': true,
+    //     "method.request.path.item": true
+    //   },
+    //   methodResponses: [{
+    //       statusCode: "200",
+    //       responseParameters: {
+    //         'method.response.header.Content-Length': false,
+    //         'method.response.header.Content-Type': false
+    //       },
+    //       responseModels: {
+    //         "application/json": {
+    //           modelId: "Empty"
+    //         }
+    //       }
+    //     },
+    //     {
+    //       statusCode: "400",
+    //     },
+    //     {
+    //       statusCode: "500",
+    //     }
+    //   ]
+    // }
+
   }
 }
