@@ -1,0 +1,3 @@
+aws route53 --profile mh list-resource-record-sets --hosted-zone-id Z0410821390C0JHBUM4V0 > ../route53/nakom.is.json
+aws route53 --profile mh list-resource-record-sets --hosted-zone-id Z095606626EYFLJ1FWUNY > ../route53/nakomis.com.json
+aws route53 --profile mh list-resource-record-sets --hosted-zone-id Z0364017XP6XXP9FC7UE > ../route53/nakomis.co.uk.json

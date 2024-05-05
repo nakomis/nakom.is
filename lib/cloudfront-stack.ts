@@ -19,7 +19,7 @@ export class CloudfrontStack extends cdk.Stack {
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
             },
             defaultRootObject: '/google'
-        })
+        });
     }
 
 };

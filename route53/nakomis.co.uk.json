@@ -1,0 +1,114 @@
+{
+    "ResourceRecordSets": [
+        {
+            "Name": "nakomis.co.uk.",
+            "Type": "A",
+            "AliasTarget": {
+                "HostedZoneId": "Z2FDTNDATAQYW2",
+                "DNSName": "d1yy8b8notprlv.cloudfront.net.",
+                "EvaluateTargetHealth": false
+            }
+        },
+        {
+            "Name": "nakomis.co.uk.",
+            "Type": "MX",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "1 \tASPMX.L.GOOGLE.COM."
+                },
+                {
+                    "Value": "5 \tALT1.ASPMX.L.GOOGLE.COM."
+                },
+                {
+                    "Value": "5 \tALT2.ASPMX.L.GOOGLE.COM."
+                },
+                {
+                    "Value": "10 \tALT3.ASPMX.L.GOOGLE.COM."
+                },
+                {
+                    "Value": "10 \tALT4.ASPMX.L.GOOGLE.COM."
+                }
+            ]
+        },
+        {
+            "Name": "nakomis.co.uk.",
+            "Type": "NS",
+            "TTL": 172800,
+            "ResourceRecords": [
+                {
+                    "Value": "ns-612.awsdns-12.net."
+                },
+                {
+                    "Value": "ns-1447.awsdns-52.org."
+                },
+                {
+                    "Value": "ns-1733.awsdns-24.co.uk."
+                },
+                {
+                    "Value": "ns-229.awsdns-28.com."
+                }
+            ]
+        },
+        {
+            "Name": "nakomis.co.uk.",
+            "Type": "SOA",
+            "TTL": 900,
+            "ResourceRecords": [
+                {
+                    "Value": "ns-612.awsdns-12.net. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"
+                }
+            ]
+        },
+        {
+            "Name": "nakomis.co.uk.",
+            "Type": "TXT",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "\"google-site-verification=mV929UEtTB7ilcVW6_ex5t6VjKfOTef74nDhUmrUtZ4\""
+                }
+            ]
+        },
+        {
+            "Name": "\\100.nakomis.co.uk.",
+            "Type": "TXT",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "\"google-site-verification=mV929UEtTB7ilcVW6_ex5t6VjKfOTef74nDhUmrUtZ4\""
+                }
+            ]
+        },
+        {
+            "Name": "_ecf0e029c173e5ad31b44386d4366baa.nakomis.co.uk.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "_e2e69cdd015243250dca317830f837ca.zzssrbpcnq.acm-validations.aws."
+                }
+            ]
+        },
+        {
+            "Name": "calendar.nakomis.co.uk.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "ghs.googlehosted.com"
+                }
+            ]
+        },
+        {
+            "Name": "znwyopv4oi7p.nakomis.co.uk.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "gv-ucimukyniufbzj.dv.googlehosted.com."
+                }
+            ]
+        }
+    ]
+}

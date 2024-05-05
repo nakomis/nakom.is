@@ -1,0 +1,174 @@
+{
+    "ResourceRecordSets": [
+        {
+            "Name": "nakomis.com.",
+            "Type": "A",
+            "AliasTarget": {
+                "HostedZoneId": "Z2FDTNDATAQYW2",
+                "DNSName": "d1yy8b8notprlv.cloudfront.net.",
+                "EvaluateTargetHealth": false
+            }
+        },
+        {
+            "Name": "nakomis.com.",
+            "Type": "MX",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "1 ASPMX.L.GOOGLE.COM."
+                },
+                {
+                    "Value": "5 ALT1.ASPMX.L.GOOGLE.COM."
+                },
+                {
+                    "Value": "5 ALT2.ASPMX.L.GOOGLE.COM."
+                },
+                {
+                    "Value": "10 ALT3.ASPMX.L.GOOGLE.COM."
+                },
+                {
+                    "Value": "10 ALT4.ASPMX.L.GOOGLE.COM."
+                }
+            ]
+        },
+        {
+            "Name": "nakomis.com.",
+            "Type": "NS",
+            "TTL": 172800,
+            "ResourceRecords": [
+                {
+                    "Value": "ns-460.awsdns-57.com."
+                },
+                {
+                    "Value": "ns-1343.awsdns-39.org."
+                },
+                {
+                    "Value": "ns-2045.awsdns-63.co.uk."
+                },
+                {
+                    "Value": "ns-795.awsdns-35.net."
+                }
+            ]
+        },
+        {
+            "Name": "nakomis.com.",
+            "Type": "SOA",
+            "TTL": 900,
+            "ResourceRecords": [
+                {
+                    "Value": "ns-460.awsdns-57.com. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"
+                }
+            ]
+        },
+        {
+            "Name": "nakomis.com.",
+            "Type": "TXT",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "\"google-site-verification=jOXIrigw2h90_2qS-nsEthTO3MC2Vri7OlIP0DsqDuY\""
+                }
+            ]
+        },
+        {
+            "Name": "\\100.nakomis.com.",
+            "Type": "TXT",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "\"google-site-verification=jOXIrigw2h90_2qS-nsEthTO3MC2Vri7OlIP0DsqDuY\""
+                }
+            ]
+        },
+        {
+            "Name": "_5fed842399b84c42cc8903ee6b03e33f.nakomis.com.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "_e3981aea24909c343455ef3a01f9b039.zzssrbpcnq.acm-validations.aws."
+                }
+            ]
+        },
+        {
+            "Name": "google._domainkey.nakomis.com.",
+            "Type": "TXT",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "\"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC1OmhC708FpYsVf5BVBXj5wyVKhf0iJo3pLPvz5R7gl4y2UgyfPo5ffMgvhCCTSM5uxKa8ksJD62620o6Ol5In9CKNsgwY+NzgKyJEMAi/C9gyjQ5g+rmUuexCNJ9il61trZVhS9472xD6TO8p7o5jrhN6ij2jFUiginlMC57ucQIDAQAB\""
+                }
+            ]
+        },
+        {
+            "Name": "calendar.nakomis.com.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "ghs.googlehosted.com"
+                }
+            ]
+        },
+        {
+            "Name": "cnametest.nakomis.com.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "nakom.is"
+                }
+            ]
+        },
+        {
+            "Name": "drive.nakomis.com.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "ghs.googlehosted.com"
+                }
+            ]
+        },
+        {
+            "Name": "_8a234baacc29f4152a79d32118186dd3.homeasistant.nakomis.com.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "_04a7904d4fbc39faa14002b42dbb6092.mhbtsbpdnt.acm-validations.aws."
+                }
+            ]
+        },
+        {
+            "Name": "homeassistant.nakomis.com.",
+            "Type": "A",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "81.187.58.217"
+                }
+            ]
+        },
+        {
+            "Name": "mail.nakomis.com.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "ghs.googlehosted.com"
+                }
+            ]
+        },
+        {
+            "Name": "www.nakomis.com.",
+            "Type": "CNAME",
+            "TTL": 300,
+            "ResourceRecords": [
+                {
+                    "Value": "nakomis.com"
+                }
+            ]
+        }
+    ]
+}
