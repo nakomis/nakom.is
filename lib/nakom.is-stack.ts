@@ -16,12 +16,23 @@ export class NakomIsStack extends cdk.Stack {
             restApiName: 'nakom.is'
         });
 
-        this.addRoot(gateway);
-        this.addRobots(gateway);
-        this.addStatic(gateway);
+        const anyIntegration = new api.MockIntegration({
+            integrationResponses: [
+                {
+                    statusCode: "405",
+                }
+            ],
+            requestTemplates: {
+                'application/json': '{"statusCode": 200}'
+            }
+        });
+
+        this.addRoot(gateway, anyIntegration);
+        this.addRobots(gateway, anyIntegration);
+        this.addStatic(gateway, anyIntegration);
     }
 
-    addRoot(gateway: api.RestApi) {
+    addRoot(gateway: api.RestApi, anyIntegration: api.MockIntegration) {
         const rootIntegration = new api.MockIntegration({
             integrationResponses: [
                 {
@@ -50,9 +61,17 @@ export class NakomIsStack extends cdk.Stack {
                 }
             ]
         });
+
+        const anyRoot = gateway.root.addMethod('ANY', anyIntegration, {
+            methodResponses: [
+                {
+                    statusCode: '405'
+                }
+            ]
+        })
     }
 
-    addRobots(gateway: api.RestApi) {
+    addRobots(gateway: api.RestApi, anyIntegration: api.MockIntegration) {
         const robotsIntegration = new api.MockIntegration({
             integrationResponses: [
                 {
@@ -71,7 +90,9 @@ export class NakomIsStack extends cdk.Stack {
             }
         });
 
-        const getRobots = gateway.root.addResource('robots.txt').addMethod('GET', robotsIntegration, {
+        const robotsResource = gateway.root.addResource('robots.txt');
+
+        const getRobots = robotsResource.addMethod('GET', robotsIntegration, {
             methodResponses: [
                 {
                     responseParameters: {
@@ -81,11 +102,34 @@ export class NakomIsStack extends cdk.Stack {
                 }
             ]
         });
+
+        const anyRoot = robotsResource.addMethod('ANY', anyIntegration, {
+            methodResponses: [
+                {
+                    statusCode: '405'
+                }
+            ]
+        })
     }
 
-    addStatic(gateway: api.RestApi) {
+    addStatic(gateway: api.RestApi, anyIntegration: api.MockIntegration) {
         const staticResource = gateway.root.addResource('static');
+        staticResource.addMethod('ANY', anyIntegration, {
+            methodResponses: [
+                {
+                    statusCode: '405'
+                }
+            ]
+        });
+
         const staticFileResource = staticResource.addResource('{file+}');
+        staticFileResource.addMethod('ANY', anyIntegration, {
+            methodResponses: [
+                {
+                    statusCode: '405'
+                }
+            ]
+        });
 
         // FIXME: Create the role as part of this stack
         const myrole = Role.fromRoleArn(this, "S3Role", "arn:aws:iam::637423226886:role/MHnakom.isReadS3");
@@ -100,30 +144,30 @@ export class NakomIsStack extends cdk.Stack {
                 },
                 integrationResponses: [
                     {
-                    statusCode: "200",
-                    responseParameters: {
-                        'method.response.header.Content-Length': 'integration.response.header.Content-Length',
-                        'method.response.header.Content-Type': 'integration.response.header.Content-Type'
-                    }
-                },
-                {
-                    statusCode: "301",
-                    selectionPattern: "403",
-                    responseParameters: {
-                        'method.response.header.Location': "'https://www.google.co.uk'"
+                        statusCode: "200",
+                        responseParameters: {
+                            'method.response.header.Content-Length': 'integration.response.header.Content-Length',
+                            'method.response.header.Content-Type': 'integration.response.header.Content-Type'
+                        }
                     },
-                    responseTemplates: {
-                        'text/plain': 'Not Found'
+                    {
+                        statusCode: "301",
+                        selectionPattern: "403",
+                        responseParameters: {
+                            'method.response.header.Location': "'https://www.google.co.uk'"
+                        },
+                        responseTemplates: {
+                            'text/plain': 'Not Found'
+                        }
                     }
-                }
-            ],
+                ],
                 credentialsRole: myrole
             },
             region: "eu-west-2",
             integrationHttpMethod: "GET",
         });
 
-        const getStaticFile = staticFileResource.addMethod('GET', staticFileIntegration, {
+        const staticFileOptions: api.MethodOptions = {
             requestParameters: {
                 'method.request.path.file': true
             },
@@ -152,7 +196,9 @@ export class NakomIsStack extends cdk.Stack {
                     }
                 }
             ]
-        });
+        }
+
+        staticFileResource.addMethod('GET', staticFileIntegration, staticFileOptions);
     }
 
 }
