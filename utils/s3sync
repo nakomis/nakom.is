@@ -1,0 +1,3 @@
+export AWS_PROFILE=nakom.is
+aws s3 sync ../s3contents s3://nakom.is-static
+aws s3 sync s3://nakom.is-static ../s3contents

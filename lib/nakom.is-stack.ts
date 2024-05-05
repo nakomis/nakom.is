@@ -1,23 +1,27 @@
 import * as cdk from 'aws-cdk-lib';
 import * as api from 'aws-cdk-lib/aws-apigateway';
-import { Role } from 'aws-cdk-lib/aws-iam';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
 export interface NakomIsStackProps extends cdk.StackProps {
-    urlShortener: Function
+    urlShortener: Function,
+    bucket: s3.Bucket,
+    executionRole: iam.Role
 }
 
 export class NakomIsStack extends cdk.Stack {
     readonly anyIntegration: api.MockIntegration;
     readonly gateway: api.RestApi;
-    // FIXME: Create the role as part of this stack
-    readonly s3Role = Role.fromRoleArn(this, "S3Role", "arn:aws:iam::637423226886:role/MHnakom.isReadS3");
-    // FIXME: Create the bucket as part of a stack
-    readonly bucketName = 'mhtestfornakom.is';
+    readonly executionRole: iam.Role;
+    readonly bucket: s3.Bucket;
 
     constructor(scope: Construct, id: string, props?: NakomIsStackProps) {
         super(scope, id, props);
+
+        this.bucket = props!.bucket;
+        this.executionRole = props!.executionRole;
 
         this.gateway = new api.RestApi(this, 'RestApi', {
             restApiName: 'nakom.is',
@@ -39,6 +43,7 @@ export class NakomIsStack extends cdk.Stack {
         this.addStatic();
         this.addLambda(props!.urlShortener);
         this.addExceptions();
+
     }
 
     addRoot() {
@@ -80,7 +85,7 @@ export class NakomIsStack extends cdk.Stack {
 
         const staticFileIntegration = new api.AwsIntegration({
             service: 's3',
-            path: `${this.bucketName}/{s3file}`,
+            path: `${this.bucket.bucketName}/{s3file}`,
             options: {
                 passthroughBehavior: api.PassthroughBehavior.WHEN_NO_MATCH,
                 requestParameters: {
@@ -105,7 +110,7 @@ export class NakomIsStack extends cdk.Stack {
                         }
                     }
                 ],
-                credentialsRole: this.s3Role
+                credentialsRole: this.executionRole
             },
             region: "eu-west-2",
             integrationHttpMethod: "GET",
@@ -241,7 +246,7 @@ export class NakomIsStack extends cdk.Stack {
             const exceptionalResource = this.gateway.root.addResource(exception.path);
             const exceptionIntegration = new api.AwsIntegration({
                 service: 's3',
-                path: `${this.bucketName}/{s3file}`,
+                path: `${this.bucket.bucketName}/{s3file}`,
                 options: {
                     passthroughBehavior: api.PassthroughBehavior.WHEN_NO_MATCH,
                     requestParameters: {
@@ -266,7 +271,7 @@ export class NakomIsStack extends cdk.Stack {
                             }
                         }
                     ],
-                    credentialsRole: this.s3Role
+                    credentialsRole: this.executionRole
                 },
                 region: "eu-west-2",
                 integrationHttpMethod: "GET",
