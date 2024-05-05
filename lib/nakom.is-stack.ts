@@ -112,7 +112,7 @@ export class NakomIsStack extends cdk.Stack {
                 ],
                 credentialsRole: this.executionRole
             },
-            region: "eu-west-2",
+            region: this.region,
             integrationHttpMethod: "GET",
         });
 
@@ -273,7 +273,7 @@ export class NakomIsStack extends cdk.Stack {
                     ],
                     credentialsRole: this.executionRole
                 },
-                region: "eu-west-2",
+                region: this.region,
                 integrationHttpMethod: "GET",
             });
             exceptionalResource.addMethod("GET", exceptionIntegration, exceptionMethodOptions);
