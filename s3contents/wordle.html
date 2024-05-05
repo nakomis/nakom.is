@@ -14,9 +14,9 @@ Wordle root for <span id="date"></span>
 <script>
 const cats = ['MUsic', 'PHIal', 'TAUpe', 'CHIme', 'KAPPA'];
 const now = new Date();
-const todayIndex = Math.floor(now / (24 * 60 * 60 * 1000)) % 5;
+const todayIndex = Math.floor((now / (24 * 60 * 60 * 1000)) - (now.getTimezoneOffset() / (24 * 60))) % 5;
 const todayCat = cats[todayIndex];
 document.getElementById("date").innerHTML = Intl.DateTimeFormat("en-GB", {year: "2-digit", month: "2-digit", day: "2-digit"}).format(now);
-document.getElementById("cat").src = "https://s3.eu-west-2.amazonaws.com/nakom.is/" + todayCat + ".jpeg";
+document.getElementById("cat").src = "https://nakom.is/static/" + todayCat + ".jpeg";
 document.getElementById("word").innerHTML = todayCat;
 </script>
