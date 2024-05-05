@@ -1,22 +1,25 @@
 import * as cdk from 'aws-cdk-lib';
 import * as api from 'aws-cdk-lib/aws-apigateway';
 import { Role } from 'aws-cdk-lib/aws-iam';
+import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
 export interface NakomIsStackProps extends cdk.StackProps {
-
+    urlShortener: Function
 }
 
 export class NakomIsStack extends cdk.Stack {
+    readonly anyIntegration: api.MockIntegration;
+    readonly gateway: api.RestApi;
 
     constructor(scope: Construct, id: string, props?: NakomIsStackProps) {
         super(scope, id, props);
 
-        const gateway = new api.RestApi(this, 'RestApi', {
+        this.gateway = new api.RestApi(this, 'RestApi', {
             restApiName: 'nakom.is'
         });
 
-        const anyIntegration = new api.MockIntegration({
+        this.anyIntegration = new api.MockIntegration({
             integrationResponses: [
                 {
                     statusCode: "405",
@@ -27,12 +30,14 @@ export class NakomIsStack extends cdk.Stack {
             }
         });
 
-        this.addRoot(gateway, anyIntegration);
-        this.addRobots(gateway, anyIntegration);
-        this.addStatic(gateway, anyIntegration);
+        this.addRoot();
+        this.addRobots();
+        this.addStatic();
+        this.addLambda(props!.urlShortener);
+        this.addExceptions();
     }
 
-    addRoot(gateway: api.RestApi, anyIntegration: api.MockIntegration) {
+    addRoot() {
         const rootIntegration = new api.MockIntegration({
             integrationResponses: [
                 {
@@ -51,7 +56,7 @@ export class NakomIsStack extends cdk.Stack {
             }
         });
 
-        const getRoot = gateway.root.addMethod('GET', rootIntegration, {
+        const getRoot = this.gateway.root.addMethod('GET', rootIntegration, {
             methodResponses: [
                 {
                     responseParameters: {
@@ -62,16 +67,11 @@ export class NakomIsStack extends cdk.Stack {
             ]
         });
 
-        const anyRoot = gateway.root.addMethod('ANY', anyIntegration, {
-            methodResponses: [
-                {
-                    statusCode: '405'
-                }
-            ]
-        })
+        this.addAny405(this.gateway.root);
     }
 
-    addRobots(gateway: api.RestApi, anyIntegration: api.MockIntegration) {
+    // FIXME: Add to `addExceptions`
+    addRobots() {
         const robotsIntegration = new api.MockIntegration({
             integrationResponses: [
                 {
@@ -90,7 +90,7 @@ export class NakomIsStack extends cdk.Stack {
             }
         });
 
-        const robotsResource = gateway.root.addResource('robots.txt');
+        const robotsResource = this.gateway.root.addResource('robots.txt');
 
         const getRobots = robotsResource.addMethod('GET', robotsIntegration, {
             methodResponses: [
@@ -103,33 +103,12 @@ export class NakomIsStack extends cdk.Stack {
             ]
         });
 
-        const anyRoot = robotsResource.addMethod('ANY', anyIntegration, {
-            methodResponses: [
-                {
-                    statusCode: '405'
-                }
-            ]
-        })
+        this.addAny405(robotsResource);
     }
 
-    addStatic(gateway: api.RestApi, anyIntegration: api.MockIntegration) {
-        const staticResource = gateway.root.addResource('static');
-        staticResource.addMethod('ANY', anyIntegration, {
-            methodResponses: [
-                {
-                    statusCode: '405'
-                }
-            ]
-        });
-
+    addStatic() {
+        const staticResource = this.gateway.root.addResource('static');
         const staticFileResource = staticResource.addResource('{file+}');
-        staticFileResource.addMethod('ANY', anyIntegration, {
-            methodResponses: [
-                {
-                    statusCode: '405'
-                }
-            ]
-        });
 
         // FIXME: Create the role as part of this stack
         const myrole = Role.fromRoleArn(this, "S3Role", "arn:aws:iam::637423226886:role/MHnakom.isReadS3");
@@ -199,6 +178,69 @@ export class NakomIsStack extends cdk.Stack {
         }
 
         staticFileResource.addMethod('GET', staticFileIntegration, staticFileOptions);
+
+        this.addAny405(staticResource);
+        this.addAny405(staticFileResource);
     }
 
+    addLambda(urlShortener: Function) {
+        const lambdaIntegration = new api.LambdaIntegration(urlShortener, {
+            integrationResponses: [
+                {
+                    statusCode: "200",
+                    contentHandling: api.ContentHandling.CONVERT_TO_TEXT,
+                    responseTemplates: {
+                        'text/plain': 'User-agent: *\nDisallow: /\n'
+                    },
+                    responseParameters: {
+                        "method.response.header.Content-Type": "'text/plain'"
+                    }
+                }
+            ],
+            requestTemplates: {
+                'application/json': '{"statusCode": 200}'
+            }
+        });
+
+        const lambdaResource = this.gateway.root.addResource('{shortPath+}');
+
+        lambdaResource.addMethod('GET', lambdaIntegration, {
+            methodResponses: [
+                {
+                    responseParameters: {
+                        "method.response.header.Content-Type": true
+                    },
+                    statusCode: '200'
+                }
+            ]
+        });
+
+        this.addAny405(lambdaResource);
+    }
+
+    addExceptions() {
+        [
+            {
+                "path": "cv",
+                "file": "cv.pdf"
+            },
+            {
+                "path": "wordle",
+                "file": "wordle.html"
+            }
+        ].forEach((exception) => {
+            const exceptionalResource = this.gateway.root.addResource(exception.path);
+            this.addAny405(exceptionalResource);
+        })
+    }
+
+    addAny405(resource: cdk.aws_apigateway.IResource) {
+        resource.addMethod("ANY", this.anyIntegration, {
+            methodResponses: [
+                {
+                    statusCode: '405'
+                }
+            ]        
+        })
+    }
 }

@@ -6,10 +6,10 @@ def lambda_handler(event, context):
 
     pp = event["pathParameters"]
     
-    if (('thepath' not in pp.keys()) or ("" == pp["thepath"])):
+    if (('shortPath' not in pp.keys()) or ("" == pp["shortPath"])):
         return google()
         
-    path = pp["thepath"]
+    path = pp["shortPath"]
     
     if "robots.txt" == path:
         return robots()
