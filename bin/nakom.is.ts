@@ -5,6 +5,7 @@ import { NakomIsStack } from '../lib/nakom.is-stack';
 import { Route53Stack } from '../lib/route53-stack';
 import { LambdaStack } from '../lib/lambda-stack';
 import { S3Stack } from '../lib/s3-stack';
+import { CloudfrontStack } from '../lib/cloudfront-stack';
 
 const app = new cdk.App();
 
@@ -16,3 +17,6 @@ const nakomIsStack = new NakomIsStack(app, 'NakomIsStack', {
     executionRole: s3Stack.executionRole()
 });
 const r53Stack = new Route53Stack(app, 'Route53Stack', {});
+const cloudfrontStack = new CloudfrontStack(app, 'CloudfrontStack', {
+    gateway: nakomIsStack.gateway
+});
