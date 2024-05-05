@@ -1,4 +1,5 @@
 #!/bin/bash
-export AWS_PROFILE=nakom.is
-aws s3 sync --exclude ".DS_Store" ../s3contents s3://nakom.is-static
-aws s3 sync s3://nakom.is-static ../s3contents
+AWS_PROFILE=nakom.is
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+aws s3 sync --exclude ".DS_Store" $SCRIPT_DIR/../s3contents s3://nakom.is-static
+aws s3 sync s3://nakom.is-static $SCRIPT_DIR/../s3contents

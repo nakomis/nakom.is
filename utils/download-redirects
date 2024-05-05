@@ -1,1 +1,2 @@
-aws dynamodb scan --table-name redirects --no-paginate --profile nis > data.json
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+aws dynamodb scan --table-name redirects --no-paginate --profile nis > $SCRIPT_DIR/data.json

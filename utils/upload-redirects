@@ -1,1 +1,2 @@
-cat data.json | jq -c '.Items[]' | while read -r line; do aws dynamodb put-item --table-name redirects --profile nakom.is --item "$line" --condition-expression "attribute_not_exists(shortPath)"; done
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cat $SCRIPT_DIR/data.json | jq -c '.Items[]' | while read -r line; do aws dynamodb put-item --table-name redirects --profile nakom.is --item "$line" --condition-expression "attribute_not_exists(shortPath)"; done
