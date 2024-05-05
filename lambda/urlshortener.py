@@ -11,9 +11,6 @@ def lambda_handler(event, context):
         
     path = pp["shortPath"]
     
-    if "robots.txt" == path:
-        return robots()
-
     if path.startswith("cat") and len(path) > 3:
         return cat(path)
 
@@ -65,12 +62,3 @@ def cat(path):
                     "Location": 'https://http.cat/status/' + catPath
                 }
             }
-
-def robots():
-    print("Robots")
-    return {
-        'statusCode': 200,
-        'body': """User-agent: *
-Disallow: /
-"""
-    }
