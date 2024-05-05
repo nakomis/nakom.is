@@ -9,11 +9,13 @@ export class NakomIsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // DynamoDB Table
     const redirectTable = new TableV2(this, 'redirects', {
       tableName: 'redirects',
       partitionKey: { name: 'shortPath', type: AttributeType.STRING },
     });
 
+    // Lambda Function
     const redirectsFunction = new lambda.Function(this, 'RedirectsFunction', {
       functionName: 'urlShortener',
       runtime: lambda.Runtime.PYTHON_3_9,
@@ -23,6 +25,7 @@ export class NakomIsStack extends cdk.Stack {
 
     redirectTable.grantReadWriteData(redirectsFunction);
 
+    // API Gateway
     const gateway = new api.RestApi(this, 'RestApi', {
       restApiName: 'nakom.is'
     });
@@ -87,5 +90,22 @@ export class NakomIsStack extends cdk.Stack {
       ]
     });
 
+    // Static files
+    const staticResource = gateway.root.addResource('static');
+    const staticFileResource = staticResource.addResource('{file+}');
+
+    const staticFileIntegration = new api.AwsIntegration({
+      service: "s3",
+      region: "eu-west-2",
+      integrationHttpMethod: "GET",
+      path: "mhtestfornakom.is/{abc}",
+      options: {
+        requestParameters: {
+          "abc": "method.request.path.file"
+        }
+      }
+    });
+
+    const getStaticFile = staticFileResource.addMethod('GET', staticFileIntegration)
   }
 }
