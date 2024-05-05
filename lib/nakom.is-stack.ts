@@ -35,7 +35,7 @@ export class NakomIsStack extends cdk.Stack {
                 }
             ],
             requestTemplates: {
-                'application/json': '{"statusCode": 200}'
+                'application/json': JSON.stringify({statusCode: 0})
             }
         });
 
@@ -61,7 +61,7 @@ export class NakomIsStack extends cdk.Stack {
                 }
             ],
             requestTemplates: {
-                'application/json': '{"statusCode": 200}'
+                'application/json': JSON.stringify({statusCode: 0})
             }
         });
 
@@ -171,7 +171,7 @@ export class NakomIsStack extends cdk.Stack {
                 }
             ],
             requestTemplates: {
-                'application/json': '{"statusCode": 200}'
+                'application/json': JSON.stringify({statusCode: 0})
             }
         });
 
