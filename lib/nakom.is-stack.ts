@@ -35,7 +35,7 @@ export class NakomIsStack extends cdk.Stack {
                 }
             ],
             requestTemplates: {
-                'application/json': JSON.stringify({statusCode: 0})
+                'application/json': JSON.stringify({ statusCode: 0 })
             }
         });
 
@@ -61,7 +61,7 @@ export class NakomIsStack extends cdk.Stack {
                 }
             ],
             requestTemplates: {
-                'application/json': JSON.stringify({statusCode: 0})
+                'application/json': JSON.stringify({ statusCode: 0 })
             }
         });
 
@@ -152,7 +152,6 @@ export class NakomIsStack extends cdk.Stack {
 
         staticFileResource.addMethod('GET', staticFileIntegration, staticMethodOptions);
 
-        this.addAny405(staticResource);
         this.addAny405(staticFileResource);
     }
 
@@ -171,7 +170,7 @@ export class NakomIsStack extends cdk.Stack {
                 }
             ],
             requestTemplates: {
-                'application/json': JSON.stringify({statusCode: 0})
+                'application/json': JSON.stringify({ statusCode: 0 })
             }
         });
 
@@ -193,22 +192,11 @@ export class NakomIsStack extends cdk.Stack {
 
     addExceptions() {
         const exceptions = [
-            {
-                "path": "cv",
-                "file": "cv.pdf"
-            },
-            {
-                "path": "wordle",
-                "file": "wordle.html"
-            },
-            {
-                "path": "robots.txt",
-                "file": "robots.txt"
-            },
-            {
-                "path": "favicon.ico",
-                "file": "favicon.ico"
-            }
+            { path: "cv", file: "cv.pdf" },
+            { path: "wordle", file: "wordle.html" },
+            { path: "robots.txt", file: "robots.txt" },
+            { path: "favicon.ico", file: "favicon.ico" },
+            { path: "static", file: "static.html",  pathExists: true}
         ];
 
         const exceptionMethodOptions: api.MethodOptions = {
@@ -243,7 +231,10 @@ export class NakomIsStack extends cdk.Stack {
         };
 
         exceptions.forEach((exception) => {
-            const exceptionalResource = this.gateway.root.addResource(exception.path);
+            var exceptionalResource: api.Resource = 
+                exception.pathExists ? this.gateway.root.getResource(exception.path) as api.Resource 
+                : this.gateway.root.addResource(exception.path);
+            
             const exceptionIntegration = new api.AwsIntegration({
                 service: 's3',
                 path: `${this.bucket.bucketName}/{s3file}`,
@@ -287,7 +278,7 @@ export class NakomIsStack extends cdk.Stack {
                 {
                     statusCode: '405'
                 }
-            ]        
+            ]
         })
     }
 }
