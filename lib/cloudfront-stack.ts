@@ -22,8 +22,8 @@ export class CloudfrontStack extends cdk.Stack {
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
             },
             defaultRootObject: '/google',
-            domainNames: ['nakom.is'],
-            certificate: props?.certificate
+            domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk'],
+            certificate: cm.Certificate.fromCertificateArn(this, '3DomainCertificate', 'arn:aws:acm:us-east-1:637423226886:certificate/4a16faae-2132-4b09-952b-119fbb70f861')
         });
     }
 };

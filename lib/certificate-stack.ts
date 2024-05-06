@@ -12,11 +12,21 @@ export class CertificateStack extends cdk.Stack {
 
     constructor(scope: Construct, id: string, props?: CertificateStackProps) {
         super(scope, id, props);
-        // Create the certificate
-        this.certificate = new cm.DnsValidatedCertificate(this, "NewCert", {
-            hostedZone: props!.hostedZones[0],
-            domainName: props!.hostedZones[0].zoneName,
-            region: 'us-east-1'
+
+        var nakomisCoUkZone = route53.HostedZone.fromHostedZoneId(this, "NakomisCoUkZone", "Z0375957KMNCCT5ARZ9B");
+        var nakomisComZone = route53.HostedZone.fromHostedZoneId(this, "NakomisComZone", "Z019437529YGFB53BDUGR");
+
+        new route53.CnameRecord(this, 'NakomisCoUkDNSValidation', {
+            zone: nakomisCoUkZone,
+            recordName: '_6268b0b5b803c054d13338452449489f.nakomis.co.uk.',
+            domainName: '_4a10a1eef76bc0633ba480d76d45e673.mhbtsbpdnt.acm-validations.aws.'
         });
+
+        new route53.CnameRecord(this, 'NakomisComDNSValidation', {
+            zone: nakomisComZone,
+            recordName: '_922722e62e8b09e38ef1a47a4d37e00e.nakomis.com.',
+            domainName: '_b20903bcc12790e0d103f18c6ade05e3.mhbtsbpdnt.acm-validations.aws.'
+        });
+        
     }
 };
