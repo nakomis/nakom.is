@@ -1,14 +1,14 @@
-# Welcome to your CDK TypeScript project
+# Nakom.is
 
-This is a blank project for CDK development with TypeScript.
+![Architecture](architecture/nakom.is%20architecture.drawio.svg)
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+Deployment order:
 
-## Useful commands
-
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `npx cdk deploy`  deploy this stack to your default AWS account/region
-* `npx cdk diff`    compare deployed stack with current state
-* `npx cdk synth`   emits the synthesized CloudFormation template
+* S3Stack
+* LambdaStack
+* NakomIsStack
+* Route53Stack
+* CertificateStack
+    * Manually set the DNS records
+* CloudfrontStack
+* Route53AdditionalStack
