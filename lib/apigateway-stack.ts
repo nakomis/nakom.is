@@ -5,19 +5,19 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
-export interface NakomIsStackProps extends cdk.StackProps {
+export interface ApiGatewayStackProps extends cdk.StackProps {
     urlShortener: Function,
     bucket: s3.Bucket,
     executionRole: iam.Role
 }
 
-export class NakomIsStack extends cdk.Stack {
+export class ApiGatewayStack extends cdk.Stack {
     readonly anyIntegration: api.MockIntegration;
     readonly gateway: api.RestApi;
     readonly executionRole: iam.Role;
     readonly bucket: s3.Bucket;
 
-    constructor(scope: Construct, id: string, props?: NakomIsStackProps) {
+    constructor(scope: Construct, id: string, props?:ApiGatewayStackProps) {
         super(scope, id, props);
 
         this.bucket = props!.bucket;

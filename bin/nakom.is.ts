@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
-import { NakomIsStack } from '../lib/nakom.is-stack';
+import { ApiGatewayStack } from '../lib/apigateway-stack';
 import { Route53Stack } from '../lib/route53-stack';
 import { LambdaStack } from '../lib/lambda-stack';
 import { S3Stack } from '../lib/s3-stack';
@@ -16,7 +16,7 @@ const nvirginiaEnv = { env: { account: '637423226886', region: 'us-east-1' } };
 
 const s3Stack = new S3Stack(app, "S3Stack", londonEnv);
 const lambdaStack = new LambdaStack(app, "LambdaStack", londonEnv);
-const nakomIsStack = new NakomIsStack(app, 'NakomIsStack', {
+const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
     ...londonEnv,
     urlShortener: lambdaStack.getLambda(),
     bucket: s3Stack.s3bucket(),
@@ -33,7 +33,7 @@ const certificateStack = new CertificateStack(app, 'CertificateStack', {
 });
 const cloudfrontStack = new CloudfrontStack(app, 'CloudfrontStack', {
     ...londonEnv,
-    gateway: nakomIsStack.gateway,
+    gateway: apiGatewayStack.gateway,
     certificate: certificateStack.certificate,
     crossRegionReferences: true,
 });
