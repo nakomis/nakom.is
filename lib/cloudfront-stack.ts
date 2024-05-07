@@ -7,7 +7,7 @@ import { Construct } from 'constructs';
 
 export interface CloudfrontStackProps extends cdk.StackProps {
     gateway: api.RestApiBase,
-    certificate?: cm.Certificate
+    certificate: cm.Certificate
 }
 
 export class CloudfrontStack extends cdk.Stack {
@@ -23,7 +23,7 @@ export class CloudfrontStack extends cdk.Stack {
             },
             defaultRootObject: '/google',
             domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk'],
-            certificate: cm.Certificate.fromCertificateArn(this, '3DomainCertificate', 'arn:aws:acm:us-east-1:637423226886:certificate/4a16faae-2132-4b09-952b-119fbb70f861')
+            certificate: props!.certificate
         });
     }
 };

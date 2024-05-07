@@ -7,26 +7,38 @@ import { LambdaStack } from '../lib/lambda-stack';
 import { S3Stack } from '../lib/s3-stack';
 import { CloudfrontStack } from '../lib/cloudfront-stack';
 import { Route53AdditionalStack } from '../lib/route53-additional-stack';
-import { CertificateValidationStack } from '../lib/certificate-validation-stack'
+import { CertificateStack } from '../lib/certificate-stack';
 
 const app = new cdk.App();
 
-const s3Stack = new S3Stack(app, "S3Stack", {});
-const lambdaStack = new LambdaStack(app, "LambdaStack", {});
+const londonEnv = { env: { account: '637423226886', region: 'eu-west-2' } };
+const nvirginiaEnv = { env: { account: '637423226886', region: 'us-east-1' } };
+
+const s3Stack = new S3Stack(app, "S3Stack", londonEnv);
+const lambdaStack = new LambdaStack(app, "LambdaStack", londonEnv);
 const nakomIsStack = new NakomIsStack(app, 'NakomIsStack', {
+    ...londonEnv,
     urlShortener: lambdaStack.getLambda(),
     bucket: s3Stack.s3bucket(),
     executionRole: s3Stack.executionRole()
 });
-const r53Stack = new Route53Stack(app, 'Route53Stack', {});
-const certificateStack = new CertificateValidationStack(app, 'CertificateValidationStack', {
+const r53Stack = new Route53Stack(app, 'Route53Stack', {
+    ...londonEnv,
+    crossRegionReferences: true
+});
+const certificateStack = new CertificateStack(app, 'CertificateStack', {
+    ...nvirginiaEnv,
+    crossRegionReferences: true,
     hostedZones: r53Stack.hostedZones
 });
 const cloudfrontStack = new CloudfrontStack(app, 'CloudfrontStack', {
+    ...londonEnv,
     gateway: nakomIsStack.gateway,
-    certificate: undefined // TODO: certificateStack.certificate
+    certificate: certificateStack.certificate,
+    crossRegionReferences: true,
 });
 const route53AdditionalStack = new Route53AdditionalStack(app, 'Route53AdditionalStack', {
+    ...londonEnv,
     cloudfront: cloudfrontStack.distrubution,
     hostedZones: r53Stack.hostedZones,
     crossRegionReferences: true

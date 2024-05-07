@@ -8,8 +8,6 @@ Deployment order:
 * LambdaStack
 * NakomIsStack
 * Route53Stack
-* https://github.com/nakomis/nakom.is-certificate
-* CertificateValidationStack
-    * Manual copy the DNS Challenge from the nakom.is-certificate certificate
+* CertificateStack
 * CloudfrontStack
 * Route53AdditionalStack
