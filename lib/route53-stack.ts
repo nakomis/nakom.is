@@ -10,8 +10,14 @@ export interface Route53StackProps extends cdk.StackProps {
 
 }
 
+export type R53Zone = {
+    zoneName: string,
+    zone: route53.HostedZone,
+    legacyRecords: typeof legacyNakomIs | typeof legacyNakomisCoUk | typeof legacyNakomisCom
+}
+
 export class Route53Stack extends cdk.Stack {
-    readonly hostedZones: route53.HostedZone[];
+    readonly hostedZones: R53Zone[] = [];
 
     constructor(scope: Construct, id: string, props?: Route53StackProps) {
         super(scope, id, props);
@@ -26,25 +32,13 @@ export class Route53Stack extends cdk.Stack {
             zoneName: 'nakomis.co.uk',
         });
 
-        this.hostedZones = [nakomIsHostedZone, nakomisComHostedZone, nakomisCoUkHostedZone];
+        this.hostedZones.push({zoneName: nakomIsHostedZone.zoneName, zone: nakomIsHostedZone, legacyRecords: legacyNakomIs});
+        this.hostedZones.push({zoneName: nakomisComHostedZone.zoneName, zone: nakomisComHostedZone, legacyRecords: legacyNakomisCom});
+        this.hostedZones.push({zoneName: nakomisCoUkHostedZone.zoneName, zone: nakomisCoUkHostedZone, legacyRecords: legacyNakomisCoUk});
 
-        [
-            {
-                hostedZone: nakomIsHostedZone,
-                records: legacyNakomIs
-            },
-            {
-                hostedZone: nakomisCoUkHostedZone,
-                records: legacyNakomisCoUk
-            },
-            {
-                hostedZone: nakomisComHostedZone,
-                records: legacyNakomisCom
-            }
-        ].forEach(zone => {
-
+        this.hostedZones.forEach(zone => {
             // Import the legacy records
-            zone.records.ResourceRecordSets.forEach((rs) => {
+            zone.legacyRecords.ResourceRecordSets.forEach((rs) => {
                 switch (rs.Type) {
                     case 'NS':
                     case 'SOA':
@@ -54,25 +48,25 @@ export class Route53Stack extends cdk.Stack {
                         if (rs.AliasTarget) {
                             // skip it, these are added as non-legacy
                         } else {
-                            new route53.ARecord(this, `${zone.hostedZone.zoneName}${rs.Type}${rs.Name}`, {
+                            new route53.ARecord(this, `${zone.zone.zoneName}${rs.Type}${rs.Name}`, {
                                 recordName: rs.Name,
-                                zone: zone.hostedZone,
+                                zone: zone.zone,
                                 target: route53.RecordTarget.fromValues(...rs.ResourceRecords.map((r) => r.Value)),
                                 ttl: rs.TTL ? cdk.Duration.seconds(rs.TTL) : undefined
                             })
                         }
                         break;
                     case 'CNAME':
-                        new route53.CnameRecord(this, `${zone.hostedZone.zoneName}${rs.Type}${rs.Name}`, {
-                            zone: zone.hostedZone,
+                        new route53.CnameRecord(this, `${zone.zone.zoneName}${rs.Type}${rs.Name}`, {
+                            zone: zone.zone,
                             recordName: rs.Name,
                             domainName: rs.ResourceRecords![0].Value,
                             ttl: rs.TTL ? cdk.Duration.seconds(rs.TTL) : undefined
                         });
                         break;
                     case 'MX':
-                        new route53.MxRecord(this, `${zone.hostedZone.zoneName}${rs.Type}${rs.Name}`, {
-                            zone: zone.hostedZone,
+                        new route53.MxRecord(this, `${zone.zone.zoneName}${rs.Type}${rs.Name}`, {
+                            zone: zone.zone,
                             recordName: rs.Name,
                             ttl: rs.TTL ? cdk.Duration.seconds(rs.TTL) : undefined,
                             values: rs.ResourceRecords!.map(rec => {
@@ -81,8 +75,8 @@ export class Route53Stack extends cdk.Stack {
                         });
                         break;
                     case 'TXT':
-                        new route53.TxtRecord(this, `${zone.hostedZone.zoneName}${rs.Type}${rs.Name}`, {
-                            zone: zone.hostedZone,
+                        new route53.TxtRecord(this, `${zone.zone.zoneName}${rs.Type}${rs.Name}`, {
+                            zone: zone.zone,
                             recordName: rs.Name,
                             ttl: rs.TTL ? cdk.Duration.seconds(rs.TTL) : undefined,
                             values: rs.ResourceRecords!.map(rec => rec.Value.replace('"', ''))

@@ -3,10 +3,11 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import { Construct } from 'constructs';
+import { R53Zone } from './route53-stack';
 
 export interface Route53AdditionalStackProps extends cdk.StackProps {
     cloudfront: cloudfront.Distribution,
-    hostedZones: route53.HostedZone[]
+    hostedZones: R53Zone[]
 }
 
 export class Route53AdditionalStack extends cdk.Stack {
@@ -17,7 +18,7 @@ export class Route53AdditionalStack extends cdk.Stack {
             // Create the A Alias record, pointing to the CDN
             new route53.ARecord(this, `${zone.zoneName}AApiGateway`, {
                 recordName: zone.zoneName,
-                zone: zone,
+                zone: zone.zone,
                 target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(props!.cloudfront))
             });
         });

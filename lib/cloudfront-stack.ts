@@ -7,7 +7,7 @@ import { Construct } from 'constructs';
 
 export interface CloudfrontStackProps extends cdk.StackProps {
     gateway: api.RestApiBase,
-    certificate: cm.Certificate
+    certificate?: cm.Certificate
 }
 
 export class CloudfrontStack extends cdk.Stack {
