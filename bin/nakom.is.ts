@@ -8,6 +8,7 @@ import { S3Stack } from '../lib/s3-stack';
 import { CloudfrontStack } from '../lib/cloudfront-stack';
 import { Route53AdditionalStack } from '../lib/route53-additional-stack';
 import { CertificateStack } from '../lib/certificate-stack';
+import { IAMSecretStack } from '../lib/iam-secret-stack';
 
 const app = new cdk.App();
 
@@ -42,4 +43,8 @@ const route53AdditionalStack = new Route53AdditionalStack(app, 'Route53Additiona
     cloudfront: cloudfrontStack.distrubution,
     hostedZones: r53Stack.hostedZones,
     crossRegionReferences: true
+});
+const iamSecretStack = new IAMSecretStack(app, 'IAMSecretStack', {
+    ...londonEnv,
+    redirectsTable: lambdaStack.redirectTable
 });

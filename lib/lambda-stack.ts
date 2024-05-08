@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { AttributeType, TableV2 } from 'aws-cdk-lib/aws-dynamodb';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
@@ -9,14 +9,15 @@ export interface LambdaStackProps extends cdk.StackProps {
 
 export class LambdaStack extends cdk.Stack {
     readonly redirectsFunction: lambda.Function;
+    readonly redirectTable: dynamodb.TableV2;
 
     constructor(scope: Construct, id: string, props?: LambdaStackProps) {
         super(scope, id, props);
 
         // DynamoDB Table
-        const redirectTable = new TableV2(this, 'redirects', {
+        this.redirectTable = new dynamodb.TableV2(this, 'redirects', {
             tableName: 'redirects',
-            partitionKey: { name: 'shortPath', type: AttributeType.STRING },
+            partitionKey: { name: 'shortPath', type: dynamodb.AttributeType.STRING },
         });
 
         // Lambda Function
@@ -27,7 +28,7 @@ export class LambdaStack extends cdk.Stack {
             handler: 'urlshortener.lambda_handler'
         });
 
-        redirectTable.grant(this.redirectsFunction, "dynamodb:GetItem", "dynamodb:PutItem");
+        this.redirectTable.grant(this.redirectsFunction, "dynamodb:GetItem", "dynamodb:PutItem");
     }
 
     getLambda(): lambda.Function {
