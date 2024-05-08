@@ -1,0 +1,10 @@
+if [ -z "$1" ]; then
+    echo 
+    echo Usage: nis shortUrl
+    echo
+    exit 0
+fi
+
+. $(dirname "$0")/nis.env
+
+docker run --rm -i -e AWS_ACCESS_KEY_ID=$NIS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY="$NIS_SECRET_ACCESS_KEY" -e AWS_DEFAULT_REGION=eu-west-2 public.ecr.aws/aws-cli/aws-cli dynamodb delete-item --table-name redirects --key '{"shortPath": {"S": "'$1'"}}' 

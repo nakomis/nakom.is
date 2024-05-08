@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo
+. $(dirname "$0")/nis.env
+
+docker run --rm -i \
+    -e AWS_ACCESS_KEY_ID=$NIS_ACCESS_KEY_ID \
+    -e AWS_SECRET_ACCESS_KEY="$NIS_SECRET_ACCESS_KEY" \
+    -e AWS_DEFAULT_REGION=eu-west-2 \
+    public.ecr.aws/aws-cli/aws-cli \
+    dynamodb scan --table-name redirects | \
+	jq -r '["Short", "Long", "Count"], ["=====", "====", "====="], (.Items | sort_by(.shortPath.S | ascii_downcase) | .[] | [.shortPath.S, .url.S, .hitCount.N]) | @tsv' | \
+	column -t
+echo
