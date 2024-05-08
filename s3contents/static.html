@@ -1,17 +1,48 @@
 <html>
-<!-- Source: https://css-tricks.com/making-static-noise-from-a-weird-css-gradient-bug/-->
-<style>
-    html {
-        background:
-            repeating-radial-gradient(#000 0 0.0001%, #fff 0 0.0002%) 50% 0/2500px 2500px,
-            repeating-conic-gradient(#000 0 0.0001%, #fff 0 0.0002%) 60% 60%/2500px 2500px;
-        background-blend-mode: difference;
-        animation: b .2s infinite alternate;
-    }
-    @keyframes b {
-        100% {
-            background-position: 50% 0, 60% 50%
-        }
-    }
-</style>
+    <body>
+        <div>
+            <canvas id="n2"></canvas>
+        </div>
+    </body>
 </html>
+
+<style>
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+</style>
+
+<script>
+    var canvas2 = document.getElementById("n2"); 
+    canvas2.width=window.innerWidth;
+    canvas2.height=window.innerHeight;
+    var ctx2 = canvas2.getContext("2d");
+    window.onresize = function(event) {
+        canvas2.width=window.innerWidth;
+        canvas2.height=window.innerHeight;
+    };
+
+
+
+    <!-- source: https://impossiblue.github.io/log/140528/index.html -->
+    function noise2(ctx2) {
+        var w2 = ctx2.canvas.width, h2 = ctx2.canvas.height, idata2 = ctx2.createImageData(w2, h2), buffer32_2 = new Uint32Array(idata2.data.buffer), len2 = buffer32_2.length, i2 = 0;
+        for(; i2 < len2;i2++)
+            if(Math.random() < .5) buffer32_2[i2] = 0xff000000;
+        ctx2.putImageData(idata2, 0, 0);
+    }
+    var toggle2 = true;
+    (function loop2() {
+        toggle2 = !toggle2;
+        if(toggle2) {
+            requestAnimationFrame(loop2);
+            return;
+        }
+        noise2(ctx2);
+        requestAnimationFrame(loop2);
+    })();
+
+
+
+</script>
