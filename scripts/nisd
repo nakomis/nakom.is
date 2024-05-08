@@ -1,0 +1,8 @@
+if [ -z "$1" ]; then
+    echo 
+    echo Usage: nis shortUrl
+    echo
+    exit 0
+fi
+
+aws dynamodb delete-item --table-name redirects --key '{"shortPath": {"S": "'$1'"}}' --profile nis --region eu-west-2

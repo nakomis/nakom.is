@@ -1,0 +1,25 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo 
+    echo Usage: nis shortUrl longUrl
+    echo For auto-generation of shortUrl: nis longUrl
+    echo
+    exit 0
+fi
+
+if [ -z "$2" ]; then
+    echo generating random short url...
+    shortUrl=$(head -c 6 /dev/urandom | base64 | head -c 6)
+    # shortUrl=$(uuidgen | base64 | head -c 6)
+    longUrl=$1
+else
+    shortUrl=$1
+    longUrl=$2
+fi
+
+aws dynamodb put-item --table-name redirects --item '{"shortPath": {"S": "'$shortUrl'"}, "hitCount": {"N": "0"}, "url": {"S": "'$longUrl'"}}' --profile nakom.is --region eu-west-2
+
+echo https://nakom.is/$shortUrl
+echo https://nakom.is/$shortUrl | pbcopy
+

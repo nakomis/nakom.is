@@ -1,0 +1,7 @@
+#!/bin/bash
+
+echo
+aws dynamodb scan --table-name redirects --profile nakom.is | \
+	jq -r '["Short", "Long", "Count"], ["=====", "====", "====="], (.Items | sort_by(.shortPath.S | ascii_downcase) | .[] | [.shortPath.S, .url.S, .hitCount.N]) | @tsv' | \
+	column -t
+echo
