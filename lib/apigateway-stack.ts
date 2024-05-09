@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as api from 'aws-cdk-lib/aws-apigateway';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as sm from 'aws-cdk-lib/aws-secretsmanager';
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 
@@ -16,8 +17,10 @@ export class ApiGatewayStack extends cdk.Stack {
     readonly gateway: api.RestApi;
     readonly executionRole: iam.Role;
     readonly bucket: s3.Bucket;
+    readonly apiKey: api.IApiKey;
+    readonly secret: sm.Secret;
 
-    constructor(scope: Construct, id: string, props?:ApiGatewayStackProps) {
+    constructor(scope: Construct, id: string, props?: ApiGatewayStackProps) {
         super(scope, id, props);
 
         this.bucket = props!.bucket;
@@ -26,7 +29,40 @@ export class ApiGatewayStack extends cdk.Stack {
         this.gateway = new api.RestApi(this, 'RestApi', {
             restApiName: 'nakom.is',
             binaryMediaTypes: ["*/*"],
+            defaultMethodOptions: {
+                apiKeyRequired: true
+            }
         });
+
+        const apiUsagePlan = this.gateway.addUsagePlan("ApiGatewayUsagePlan", {
+            name: 'nakom.isUsagePlan',
+            throttle: {
+                rateLimit: 5,
+                burstLimit: 5
+            },
+            quota: {
+                limit: 500,
+                period: api.Period.DAY
+            }
+        });
+        apiUsagePlan.addApiStage({
+            stage: this.gateway.deploymentStage
+        });
+
+        this.secret = new sm.Secret(this, 'SecretApiKey', {
+            generateSecretString: {
+                generateStringKey: 'apiKey',
+                secretStringTemplate: JSON.stringify({}),
+                excludeCharacters: ' %+~`#$&*()|[]{}:;<>?!\'/@"\\',
+            }
+        });
+
+        this.apiKey = this.gateway.addApiKey('ApiKey', {
+            apiKeyName: 'cfn-nakom.is-app-key',
+            value: this.secret.secretValueFromJson('apiKey').unsafeUnwrap(),
+        });
+
+        apiUsagePlan.addApiKey(this.apiKey);
 
         this.anyIntegration = new api.MockIntegration({
             integrationResponses: [
@@ -196,7 +232,7 @@ export class ApiGatewayStack extends cdk.Stack {
             { path: "wordle", file: "wordle.html" },
             { path: "robots.txt", file: "robots.txt" },
             { path: "favicon.ico", file: "favicon.ico" },
-            { path: "static", file: "static.html",  pathExists: true}
+            { path: "static", file: "static.html", pathExists: true }
         ];
 
         const exceptionMethodOptions: api.MethodOptions = {
@@ -231,10 +267,10 @@ export class ApiGatewayStack extends cdk.Stack {
         };
 
         exceptions.forEach((exception) => {
-            var exceptionalResource: api.Resource = 
-                exception.pathExists ? this.gateway.root.getResource(exception.path) as api.Resource 
-                : this.gateway.root.addResource(exception.path);
-            
+            var exceptionalResource: api.Resource =
+                exception.pathExists ? this.gateway.root.getResource(exception.path) as api.Resource
+                    : this.gateway.root.addResource(exception.path);
+
             const exceptionIntegration = new api.AwsIntegration({
                 service: 's3',
                 path: `${this.bucket.bucketName}/{s3file}`,

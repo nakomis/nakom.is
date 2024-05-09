@@ -42,7 +42,6 @@ export class Route53Stack extends cdk.Stack {
                 switch (rs.Type) {
                     case 'NS':
                     case 'SOA':
-                        console.log("Skipping NS / SOA record import");
                         break;
                     case 'A':
                         if (rs.AliasTarget) {
@@ -84,6 +83,7 @@ export class Route53Stack extends cdk.Stack {
                         break;
                     default:
                         console.error(`Unknown Route53 record type ${rs.Type} for ${rs.Name}`);
+                        break;
                 }
             })
         });
