@@ -1,7 +1,25 @@
 #!/bin/bash
 
+. $(dirname "$0")/nis.env
+
+export AWS_ACCESS_KEY_ID=$NIS_ACCESS_KEY_ID 
+export AWS_SECRET_ACCESS_KEY="$NIS_SECRET_ACCESS_KEY"
+export AWS_DEFAULT_REGION=eu-west-2
+export AWS_REGION=eu-west-2
+unset AWS_PROFILE
+unset AWS_SESSION_TOKEN
+unset AWS_SECURITY_TOKEN
+
+if [ -z "$1" ]; then
+    LIMIT=50
+    TRUNCATEDLEN=47
+else
+    LIMIT=$1
+    TRUNCATEDLEN=$[$LIMIT - 3]
+fi
+
 echo
-aws dynamodb scan --table-name redirects --profile nakom.is | \
-	jq -r '["Short", "Long", "Count"], ["=====", "====", "====="], (.Items | sort_by(.shortPath.S | ascii_downcase) | .[] | [.shortPath.S, .url.S, .hitCount.N]) | @tsv' | \
+aws dynamodb scan --table-name redirects | \
+	jq -r '["Short", "Long", "Count"], ["=====", "====", "====="], (.Items | sort_by(.shortPath.S | ascii_downcase) | .[] | [.shortPath.S, (if ((.url.S | length) > '$LIMIT') then .url.S[0:'$TRUNCATEDLEN'] + "..." else .url.S end), .hitCount.N]) | @tsv' | \
 	column -t
 echo

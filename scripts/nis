@@ -18,7 +18,17 @@ else
     longUrl=$2
 fi
 
-aws dynamodb put-item --table-name redirects --item '{"shortPath": {"S": "'$shortUrl'"}, "hitCount": {"N": "0"}, "url": {"S": "'$longUrl'"}}' --profile nakom.is --region eu-west-2
+. $(dirname "$0")/nis.env
+
+export AWS_ACCESS_KEY_ID=$NIS_ACCESS_KEY_ID
+export AWS_SECRET_ACCESS_KEY="$NIS_SECRET_ACCESS_KEY"
+export AWS_DEFAULT_REGION=eu-west-2
+export AWS_REGION=eu-west-2
+unset AWS_PROFILE
+unset AWS_SESSION_TOKEN
+unset AWS_SECURITY_TOKEN
+
+aws dynamodb put-item --table-name redirects --item '{"shortPath": {"S": "'$shortUrl'"}, "hitCount": {"N": "0"}, "url": {"S": "'$longUrl'"}}' --region eu-west-2
 
 echo https://nakom.is/$shortUrl
 echo https://nakom.is/$shortUrl | pbcopy
