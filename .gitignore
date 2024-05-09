@@ -9,3 +9,5 @@ cdk.out
 
 .DS_Store
 dist
+# Vim swap files
+*.swp

@@ -3,12 +3,20 @@
 echo
 . $(dirname "$0")/nis.env
 
+if [ -z "$1" ]; then
+    LIMIT=50
+    TRUNCATEDLEN=47
+else
+    LIMIT=$1
+    TRUNCATEDLEN=$[$LIMIT - 3]
+fi
+
 docker run --rm -i \
     -e AWS_ACCESS_KEY_ID=$NIS_ACCESS_KEY_ID \
     -e AWS_SECRET_ACCESS_KEY="$NIS_SECRET_ACCESS_KEY" \
     -e AWS_DEFAULT_REGION=eu-west-2 \
     public.ecr.aws/aws-cli/aws-cli \
     dynamodb scan --table-name redirects | \
-	jq -r '["Short", "Long", "Count"], ["=====", "====", "====="], (.Items | sort_by(.shortPath.S | ascii_downcase) | .[] | [.shortPath.S, .url.S, .hitCount.N]) | @tsv' | \
+	jq -r '["Short", "Long", "Count"], ["=====", "====", "====="], (.Items | sort_by(.shortPath.S | ascii_downcase) | .[] | [.shortPath.S, (if ((.url.S | length) > '$LIMIT') then .url.S[0:'$TRUNCATEDLEN'] + "..." else .url.S end), .hitCount.N]) | @tsv' | \
 	column -t
 echo
