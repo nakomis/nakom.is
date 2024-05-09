@@ -25,11 +25,21 @@ export class S3Stack extends cdk.Stack {
             removalPolicy: RemovalPolicy.RETAIN,
         });
 
+        // Grab the nakom.is bucket to prevent cyber-squatting
+        new s3.Bucket(this, "nakom.isBucket", {
+            bucketName: 'nakom.is',
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+            encryption: s3.BucketEncryption.S3_MANAGED,
+            enforceSSL: true,
+            versioned: false,
+            removalPolicy: RemovalPolicy.RETAIN,
+        });
+
+        // Create a role to allow the API gateway to access the bucket
         this.executionrole = new iam.Role(this, "ReadS3BucketRole", {
             assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
             path: "/service-role/"
         });
-
         this.bucket.grantRead(this.executionrole);
     }
 
