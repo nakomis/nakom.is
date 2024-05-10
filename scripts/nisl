@@ -13,6 +13,9 @@ unset AWS_SECURITY_TOKEN
 if [ -z "$1" ]; then
     LIMIT=50
     TRUNCATEDLEN=47
+elif [[ "all" == "$1" ]]; then
+    LIMIT=$((2**32))
+    TRUNCATEDLEN=$((2**32 - 3))
 else
     LIMIT=$1
     TRUNCATEDLEN=$[$LIMIT - 3]
