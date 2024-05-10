@@ -5,6 +5,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sm from 'aws-cdk-lib/aws-secretsmanager';
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
+import { EndpointType } from 'aws-cdk-lib/aws-apigatewayv2';
 
 export interface ApiGatewayStackProps extends cdk.StackProps {
     urlShortener: Function,
@@ -27,6 +28,7 @@ export class ApiGatewayStack extends cdk.Stack {
         this.executionRole = props!.executionRole;
 
         this.gateway = new api.RestApi(this, 'RestApi', {
+            endpointTypes: [EndpointType.REGIONAL],
             restApiName: 'nakom.is',
             binaryMediaTypes: ["*/*"],
             defaultMethodOptions: {
