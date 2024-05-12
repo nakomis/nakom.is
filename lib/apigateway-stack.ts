@@ -52,6 +52,7 @@ export class ApiGatewayStack extends cdk.Stack {
         });
 
         this.secret = new sm.Secret(this, 'SecretApiKey', {
+            secretName: 'NISApiKey',
             generateSecretString: {
                 generateStringKey: 'apiKey',
                 secretStringTemplate: JSON.stringify({}),

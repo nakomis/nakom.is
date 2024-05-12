@@ -16,13 +16,13 @@ export class IAMSecretStack extends cdk.Stack {
             userName: 'nis'
         });
         const accessKey = new iam.AccessKey(this, 'NISAccessKey', { user });
-        const secretAccessKey = new sm.Secret(this, 'NISSecretAccessKeySecret', {
-            secretName: 'NISSecretAccessKey',
-            secretStringValue: accessKey.secretAccessKey,
-        });
-        const secretAccssKeyId = new sm.Secret(this, 'NISAccessKeyIdSecret', {
-            secretName: 'NISAccessKeyId',
-            secretStringValue: cdk.SecretValue.unsafePlainText(accessKey.accessKeyId)
+
+        const secretCreds = new sm.Secret(this, 'NISCredentials', {
+            secretName: 'NISCredentials',
+            secretObjectValue: {
+                accessKeyId: cdk.SecretValue.unsafePlainText(accessKey.accessKeyId),
+                secretAccessKey: accessKey.secretAccessKey
+            }
         });
 
         props.redirectsTable.grant(user, 
