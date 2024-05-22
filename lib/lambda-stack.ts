@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 
 export interface LambdaStackProps extends cdk.StackProps {
@@ -25,7 +26,8 @@ export class LambdaStack extends cdk.Stack {
             functionName: 'urlShortener',
             runtime: lambda.Runtime.PYTHON_3_9,
             code: lambda.Code.fromAsset('lambda'),
-            handler: 'urlshortener.lambda_handler'
+            handler: 'urlshortener.lambda_handler',
+            logRetention: RetentionDays.SIX_MONTHS
         });
 
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:GetItem", "dynamodb:PutItem");
