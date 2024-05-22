@@ -75,7 +75,8 @@ export class ApiGatewayStack extends cdk.Stack {
             ],
             requestTemplates: {
                 'application/json': JSON.stringify({ statusCode: 0 })
-            }
+            },
+            contentHandling: api.ContentHandling.CONVERT_TO_TEXT
         });
 
         this.addRoot();
