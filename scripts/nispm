@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Gets AWS creds from SSO for use with Postman
+
+CREDS=$(aws configure export-credentials --profile nakom.is --format process)
+
+AWS_ACCESS_KEY_ID=$(jq '.AccessKeyId' <<< $CREDS | tr -d '"')
+AWS_SECRET_ACCESS_KEY=$(jq '.SecretAccessKey' <<< $CREDS | tr -d '"')
+AWS_SESSION_TOKEN=$(jq '.SessionToken' <<< $CREDS | tr -d '"')
+
+echo
+echo 'pm.collectionVariables.set("AWS_ACCESS_KEY_ID", "'$AWS_ACCESS_KEY_ID'");'
+echo 'pm.collectionVariables.set("AWS_SECRET_ACCESS_KEY", "'$AWS_SECRET_ACCESS_KEY'");'
+echo 'pm.collectionVariables.set("AWS_SESSION_TOKEN", "'$AWS_SESSION_TOKEN'");'
+echo

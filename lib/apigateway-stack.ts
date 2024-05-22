@@ -140,13 +140,15 @@ export class ApiGatewayStack extends cdk.Stack {
                     },
                     {
                         statusCode: "301",
-                        selectionPattern: "403",
+                        selectionPattern: "404",
                         responseParameters: {
-                            'method.response.header.Location': "'https://www.google.co.uk'"
+                            'method.response.header.Location': "'https://www.google.co.uk'",
+                            'method.response.header.Content-Type': "'application/json'"
                         },
                         responseTemplates: {
-                            'text/plain': 'Not Found'
-                        }
+                            'application/xml': '#set($context.responseOverride.header.Location = "https://www.google.com/search?q=" + $method.request.path.file)\n{}'
+                        },
+                        contentHandling: api.ContentHandling.CONVERT_TO_TEXT
                     }
                 ],
                 credentialsRole: this.executionRole
