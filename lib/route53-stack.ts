@@ -78,7 +78,7 @@ export class Route53Stack extends cdk.Stack {
                             zone: zone.zone,
                             recordName: rs.Name,
                             ttl: rs.TTL ? cdk.Duration.seconds(rs.TTL) : undefined,
-                            values: rs.ResourceRecords!.map(rec => rec.Value.replace('"', ''))
+                            values: rs.ResourceRecords!.map(rec => rec.Value.replace(/"/gi, ''))
                         });
                         break;
                     default:
