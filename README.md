@@ -3,6 +3,7 @@
 The purpose of this project is to create a URL shortener to redirect URLs such as [nakom.is/w](https://nakom.is/w) to any specified URL. In this case, the BBC Weather page for my part of Edinburgh.
 
 ## Table of Contents
+
 <!-- toc -->
 
 - [Architecture Diagram](#architecture-diagram)
