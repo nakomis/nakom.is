@@ -238,41 +238,44 @@ export class ApiGatewayStack extends cdk.Stack {
             { path: "wordle", file: "wordle.html" },
             { path: "robots.txt", file: "robots.txt" },
             { path: "favicon.ico", file: "favicon.ico" },
-            { path: "static", file: "static.html", pathExists: true }
+            { path: "static", file: "static.html", pathExists: true },
+            { path: "mu", file: "MUsic.jpeg", download: true},
+            { path: "mupic", file: "MUsic.jpeg", download: false}
         ];
 
-        const exceptionMethodOptions: api.MethodOptions = {
-            methodResponses: [
-                {
-                    statusCode: "200",
-                    responseParameters: {
-                        'method.response.header.Content-Length': false,
-                        'method.response.header.Content-Type': false
-                    },
-                    responseModels: {
-                        "application/json": {
-                            modelId: "Empty"
-                        }
-                    }
-                },
-                {
-                    statusCode: "301",
-                    responseParameters: {
-                        'method.response.header.Location': true
-                    },
-                    responseModels: {
-                        "application/octet-stream": {
-                            modelId: "Empty"
-                        },
-                        "application/pdf": {
-                            modelId: "Empty"
-                        }
-                    }
-                }
-            ]
-        };
-
         exceptions.forEach((exception) => {
+            const exceptionMethodOptions: api.MethodOptions = {
+                methodResponses: [
+                    {
+                        statusCode: "200",
+                        responseParameters: {
+                            'method.response.header.Content-Length': false,
+                            'method.response.header.Content-Type': false,
+                            ...(exception.download && {'method.response.header.Content-Disposition': false})
+                        },
+                        responseModels: {
+                            "application/json": {
+                                modelId: "Empty"
+                            }
+                        }
+                    },
+                    {
+                        statusCode: "301",
+                        responseParameters: {
+                            'method.response.header.Location': true
+                        },
+                        responseModels: {
+                            "application/octet-stream": {
+                                modelId: "Empty"
+                            },
+                            "application/pdf": {
+                                modelId: "Empty"
+                            }
+                        }
+                    }
+                ]
+            };
+
             var exceptionalResource: api.Resource =
                 exception.pathExists ? this.gateway.root.getResource(exception.path) as api.Resource
                     : this.gateway.root.addResource(exception.path);
@@ -290,7 +293,8 @@ export class ApiGatewayStack extends cdk.Stack {
                             statusCode: "200",
                             responseParameters: {
                                 'method.response.header.Content-Length': 'integration.response.header.Content-Length',
-                                'method.response.header.Content-Type': 'integration.response.header.Content-Type'
+                                'method.response.header.Content-Type': 'integration.response.header.Content-Type',
+                                ...(exception.download && {'method.response.header.Content-Disposition': `'attachment; filename="${exception.file}"'`})
                             }
                         },
                         {
