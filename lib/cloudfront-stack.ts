@@ -25,6 +25,7 @@ export class CloudfrontStack extends cdk.Stack {
                         "x-api-key": props!.secret.secretValueFromJson('apiKey').unsafeUnwrap(),
                     }
                 }),
+                allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
             },
             defaultRootObject: '/google',
