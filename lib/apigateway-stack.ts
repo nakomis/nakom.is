@@ -45,7 +45,7 @@ export class ApiGatewayStack extends cdk.Stack {
                 burstLimit: 5
             },
             quota: {
-                limit: 500,
+                limit: 1500,
                 period: api.Period.DAY
             }
         });
