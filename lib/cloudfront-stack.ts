@@ -3,13 +3,12 @@ import * as api from 'aws-cdk-lib/aws-apigateway';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as cm from 'aws-cdk-lib/aws-certificatemanager';
-import * as sm from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
 export interface CloudfrontStackProps extends cdk.StackProps {
     gateway: api.RestApiBase,
     certificate: cm.Certificate,
-    secret: sm.Secret
+    apiKeyString: string
 }
 
 export class CloudfrontStack extends cdk.Stack {
@@ -22,7 +21,7 @@ export class CloudfrontStack extends cdk.Stack {
             defaultBehavior: {
                 origin: new origins.RestApiOrigin(props!.gateway, {
                     customHeaders: {
-                        "x-api-key": props!.secret.secretValueFromJson('apiKey').unsafeUnwrap(),
+                        "x-api-key": props!.apiKeyString,
                     }
                 }),
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,

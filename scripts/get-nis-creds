@@ -1,8 +1,7 @@
 #!/bin/bash
 
-CREDS=$(aws secretsmanager --profile nakom.is-admin get-secret-value --secret-id NISCredentials | jq --raw-output '.SecretString')
-ACCESS_KEY_ID=$(jq '.accessKeyId' <<< $CREDS | tr -d '"')
-SECRET_ACCESS_KEY=$(jq '.secretAccessKey' <<< $CREDS | tr -d '"')
+ACCESS_KEY_ID=$(aws ssm get-parameter --name "/nakom.is/nis/accessKeyId" --profile nakom.is-admin | jq .Parameter.Value | tr -d '"')
+SECRET_ACCESS_KEY=$(aws ssm get-parameter --name "/nakom.is/nis/secretAccessKey" --profile nakom.is-admin | jq .Parameter.Value | tr -d '"')
 
 security add-generic-password -a NIS -s NIS_ACCESS_KEY_ID -w $ACCESS_KEY_ID -U
 security add-generic-password -a NIS -s NIS_SECRET_ACCESS_KEY -w $SECRET_ACCESS_KEY -U
