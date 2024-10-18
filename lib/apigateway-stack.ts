@@ -2,7 +2,9 @@ import * as cdk from 'aws-cdk-lib';
 import * as api from 'aws-cdk-lib/aws-apigateway';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as sm from 'aws-cdk-lib/aws-secretsmanager';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import { generateRandomString } from "ts-randomstring/lib"
+
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import { EndpointType } from 'aws-cdk-lib/aws-apigatewayv2';
@@ -19,7 +21,7 @@ export class ApiGatewayStack extends cdk.Stack {
     readonly executionRole: iam.Role;
     readonly bucket: s3.Bucket;
     readonly apiKey: api.IApiKey;
-    readonly secret: sm.Secret;
+    readonly apiKeyString: string;
 
     constructor(scope: Construct, id: string, props?: ApiGatewayStackProps) {
         super(scope, id, props);
@@ -51,18 +53,19 @@ export class ApiGatewayStack extends cdk.Stack {
             stage: this.gateway.deploymentStage
         });
 
-        this.secret = new sm.Secret(this, 'SecretApiKey', {
-            secretName: 'NISApiKey',
-            generateSecretString: {
-                generateStringKey: 'apiKey',
-                secretStringTemplate: JSON.stringify({}),
-                excludeCharacters: ' %+~`#$&*()|[]{}:;<>?!\'/@"\\',
-            }
+        this.apiKeyString = generateRandomString({
+            length: 32
+        });
+
+        const ssmNISAPIKey = new ssm.StringParameter(this, "NISAPIKeyParam", {
+            parameterName: "/nakom.is/nis/apikey",
+            description: "API Key for NIS",
+            stringValue: this.apiKeyString
         });
 
         this.apiKey = this.gateway.addApiKey('ApiKey', {
             apiKeyName: 'cfn-nakom.is-app-key',
-            value: this.secret.secretValueFromJson('apiKey').unsafeUnwrap(),
+            value: this.apiKeyString,
         });
 
         apiUsagePlan.addApiKey(this.apiKey);
