@@ -7,8 +7,10 @@ import { generateRandomString } from "ts-randomstring/lib"
 
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
-import { EndpointType } from 'aws-cdk-lib/aws-apigatewayv2';
+import { CfnApiGatewayManagedOverrides, EndpointType } from 'aws-cdk-lib/aws-apigatewayv2';
 import { GetApiKeyCr } from './apikey-cr';
+import { LogGroup, QueryDefinition, QueryString, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { parse } from 'path';
 
 export interface ApiGatewayStackProps extends cdk.StackProps {
     urlShortener: Function,
@@ -29,12 +31,33 @@ export class ApiGatewayStack extends cdk.Stack {
         this.bucket = props!.bucket;
         this.executionRole = props!.executionRole;
 
+        const logGroup = new LogGroup(this, 'ApiGatewayAccessLogs', {
+            logGroupName: '/nakom.is/apigateway/access-log',
+            retention: RetentionDays.SIX_MONTHS,
+        });
+
+        const savedQuery = new QueryDefinition(this, "ApiGatewayLogInsightQuery", {
+            logGroups: [logGroup],
+            queryDefinitionName: "Path and IP",
+            queryString: new QueryString({
+                parseStatements: ['@message "* * *" as path, ip, junk'],
+                display: 'path, ip, @timestamp, @message, @logStream, @log',
+                limit: 1000,
+                sort: '@timestamp desc'
+            })
+        });
+
         this.gateway = new api.RestApi(this, 'RestApi', {
             endpointTypes: [EndpointType.REGIONAL],
             restApiName: 'nakom.is',
             binaryMediaTypes: ["*/*"],
             defaultMethodOptions: {
                 apiKeyRequired: true
+            },
+            deployOptions: {
+                loggingLevel: api.MethodLoggingLevel.INFO,
+                accessLogDestination: new api.LogGroupLogDestination(logGroup),
+                accessLogFormat: api.AccessLogFormat.custom(`$context.path $context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] "$context.httpMethod $context.resourcePath $context.protocol" $context.status $context.responseLength $context.requestId`)
             }
         });
 
