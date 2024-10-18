@@ -8,6 +8,7 @@ import { generateRandomString } from "ts-randomstring/lib"
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import { EndpointType } from 'aws-cdk-lib/aws-apigatewayv2';
+import { GetApiKeyCr } from './apikey-cr';
 
 export interface ApiGatewayStackProps extends cdk.StackProps {
     urlShortener: Function,
@@ -20,7 +21,6 @@ export class ApiGatewayStack extends cdk.Stack {
     readonly gateway: api.RestApi;
     readonly executionRole: iam.Role;
     readonly bucket: s3.Bucket;
-    readonly apiKey: api.IApiKey;
     readonly apiKeyString: string;
 
     constructor(scope: Construct, id: string, props?: ApiGatewayStackProps) {
@@ -53,9 +53,16 @@ export class ApiGatewayStack extends cdk.Stack {
             stage: this.gateway.deploymentStage
         });
 
-        this.apiKeyString = generateRandomString({
-            length: 32
+        // Creating a key with an explicit value will cause a re-deploy to fail
+        // with a duplicate key name. CDK seems to consider a new key with a different
+        // value to a new resource (with the same name), which precludes creating a key
+        // with e.g. `generateRandomString` as the value
+        // In addition, it's not possible to read the value of the key directly, so I use
+        // a Custom resource to obtain the value
+        const apiKey = this.gateway.addApiKey('ApiKey', {
+            apiKeyName: 'cfn-nakom.is-app-key'
         });
+        this.apiKeyString = new GetApiKeyCr(this, "NISApiKeyGetter", {apiKey: apiKey}).apikeyValue;
 
         const ssmNISAPIKey = new ssm.StringParameter(this, "NISAPIKeyParam", {
             parameterName: "/nakom.is/nis/apikey",
@@ -63,12 +70,7 @@ export class ApiGatewayStack extends cdk.Stack {
             stringValue: this.apiKeyString
         });
 
-        this.apiKey = this.gateway.addApiKey('ApiKey', {
-            apiKeyName: 'cfn-nakom.is-app-key',
-            value: this.apiKeyString,
-        });
-
-        apiUsagePlan.addApiKey(this.apiKey);
+        apiUsagePlan.addApiKey(apiKey);
 
         this.anyIntegration = new api.MockIntegration({
             integrationResponses: [
