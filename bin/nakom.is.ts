@@ -49,3 +49,5 @@ const iamSecretStack = new IAMSecretStack(app, 'IAMSecretStack', {
     ...londonEnv,
     redirectsTable: lambdaStack.redirectTable
 });
+
+cdk.Tags.of(app).add("MH-Project", "nakom.is");
