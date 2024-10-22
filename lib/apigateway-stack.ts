@@ -3,14 +3,12 @@ import * as api from 'aws-cdk-lib/aws-apigateway';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
-import { generateRandomString } from "ts-randomstring/lib"
 
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import { CfnApiGatewayManagedOverrides, EndpointType } from 'aws-cdk-lib/aws-apigatewayv2';
 import { GetApiKeyCr } from './apikey-cr';
 import { LogGroup, QueryDefinition, QueryString, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { parse } from 'path';
 
 export interface ApiGatewayStackProps extends cdk.StackProps {
     urlShortener: Function,
