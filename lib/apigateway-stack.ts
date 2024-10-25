@@ -266,7 +266,8 @@ export class ApiGatewayStack extends cdk.Stack {
             { path: "favicon.ico", file: "favicon.ico" },
             { path: "static", file: "static.html", pathExists: true },
             { path: "mu", file: "MUsic.jpeg", download: true},
-            { path: "mupic", file: "MUsic.jpeg", download: false}
+            { path: "mupic", file: "MUsic.jpeg", download: false},
+            { path: "privacy-policy", file: "privacy-policy.pdf" },
         ];
 
         exceptions.forEach((exception) => {
