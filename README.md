@@ -71,8 +71,28 @@ There's also an exception for short URLs beginning with the literal *cat*, which
 
 
 ### S3 Bucket
+
+The [S3](lib/s3-stack.ts) stack creates a private S3 bucket used to store static content which is served directly by the API Gateway without a redirect. This includes files such as *favicon.ico*, *robots.txt*, the [CV](s3contents/cv.pdf), and the [wordle](s3contents/wordle.html) page along with its associated images.
+
+The bucket is configured with server-side encryption, SSL enforcement, and blocks all public access. An IAM role is created to allow the API Gateway to read objects from the bucket. Static content is synced to the bucket using the [s3sync](utils/s3sync) utility script.
+
+In addition, a second bucket with the name *nakom.is* is created to prevent cyber-squatting, as S3 bucket names are globally unique across all AWS accounts.
+
 ### Additional Route53 Records
+
+The [Route53Additional](lib/route53-additional-stack.ts) stack creates the DNS *A Alias* records pointing to the Cloudfront distribution. This must be done in a separate stack as it depends on the Cloudfront distribution being created first, and therefore must be deployed after the CloudfrontStack in the deployment order.
+
+For each hosted zone, an A record is created with the zone name pointing to the Cloudfront distribution as an alias target. This ensures that requests to the root domain (e.g. https://nakom.is) are routed through the CDN.
+
 ### Creating, listing, and deleting shortcuts
+
+Shortcuts are stored in the DynamoDB table created by the Lambda stack, and can be managed using three convenience scripts in the [scripts](scripts) directory.
+
+The [nis](scripts/nis) script creates a new shortcut. It can be used with a specified short URL (`nis shortUrl longUrl`) or with auto-generation of a random 6-character short URL (`nis longUrl`). The generated short URL is both displayed and copied to the clipboard for convenience.
+
+The [nisl](scripts/nisl) script lists all shortcuts in a formatted table showing the short path, target URL, and hit count. By default it displays 50 characters of the target URL, but this can be customised by passing a limit parameter, or `all` to display the full URL.
+
+The [nisd](scripts/nisd) script deletes a shortcut by its short path (`nisd shortUrl`), removing the entry directly from the DynamoDB table.
 
 
 ## Deployment order
