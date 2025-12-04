@@ -30,7 +30,7 @@ export class LambdaStack extends cdk.Stack {
         // Lambda Function
         this.redirectsFunction = new lambda.Function(this, 'RedirectsFunction', {
             functionName: 'urlShortener',
-            runtime: lambda.Runtime.PYTHON_3_9,
+            runtime: lambda.Runtime.PYTHON_3_12,
             code: lambda.Code.fromAsset('lambda'),
             handler: 'urlshortener.lambda_handler',
             logGroup: logGroup

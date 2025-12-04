@@ -22,7 +22,7 @@ def lambda_handler(event, context):
         hitcount = int(dbdata["Item"]["hitCount"]["N"])
         hitcount = hitcount + 1
         client.put_item(TableName='redirects', Item={'shortPath': {'S': path}, 'hitCount': {'N': str(hitcount)}, 'url': {'S': url}})
-        if not url.startswith('http'):
+        if not url.startswith('http') and not url.startswith('chrome://'):
             url = "https://" + url
         print("Redirecting: " + path)
         return  {
