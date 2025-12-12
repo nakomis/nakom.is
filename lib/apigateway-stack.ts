@@ -262,6 +262,7 @@ export class ApiGatewayStack extends cdk.Stack {
         const exceptions = [
             { path: "cv", file: "cv.pdf" },
             { path: "wordle", file: "wordle.html" },
+            { path: "social", file: "social.html" },
             { path: "robots.txt", file: "robots.txt" },
             { path: "favicon.ico", file: "favicon.ico" },
             { path: "static", file: "static.html", pathExists: true },
