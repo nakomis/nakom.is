@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html style="background-color:black; color:white; font-family: Arial, sans-serif;">
+
+<!--
+    Looking for something interesting in the code?
+    Get the full source code at https://nakom.is/nakom.is
+    It's an open-source project, so feel free to contribute or use it as you like!
+-->
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Links</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100hv;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            margin-top: 20px;
+            margin-bottom: 40px;
+            font-size: 2.5em;
+        }
+        .social-links {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            max-width: 500px;
+            width: 100%;
+        }
+        .social-link {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            text-decoration: none;
+            color: white;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .social-link:hover {
+            background-color: #2a2a2a;
+            transform: translateX(5px);
+        }
+        .social-link i {
+            font-size: 2.5em;
+            width: 60px;
+            text-align: center;
+        }
+        .social-link span {
+            font-size: 1.3em;
+        }
+        .linkedin { color: #0077b5; }
+        .github { color: #f0f0f0; }
+        .bluesky { color: #1185fe; }
+        .facebook { color: #1877f2; }
+        .twitter { color: #55acee; }
+        .cv { color: #ff8c00; }
+    </style>
+</head>
+<body>
+    <h1>Martin Harris</h1>
+    <div class="social-links">
+        <a href="https://nakom.is/cv" class="social-link" target="_blank">
+            <i class="fas fa-file-alt cv"></i>
+            <span>CV / Resume</span>
+        </a>
+        <a href="https://www.linkedin.com/in/nakomis" class="social-link" target="_blank">
+            <i class="fab fa-linkedin linkedin"></i>
+            <span>LinkedIn</span>
+        </a>
+        <a href="https://github.com/nakomis/" class="social-link" target="_blank">
+            <i class="fab fa-github github"></i>
+            <span>GitHub</span>
+        </a>
+        <a href="https://bsky.app/profile/nakomis.com" class="social-link" target="_blank">
+            <i class="fas fa-cloud bluesky"></i>
+            <span>Bluesky</span>
+        </a>
+        <a href="https://www.facebook.com/Nakomis/" class="social-link" target="_blank">
+            <i class="fab fa-facebook facebook"></i>
+            <span>Facebook</span>
+        </a>
+        <a href="https://x.com/nakomis" class="social-link" target="_blank">
+            <i class="fab fa-twitter twitter"></i>
+            <span>(fka) Twitter</span>
+        </a>
+    </div>
+</body>
+</html>
