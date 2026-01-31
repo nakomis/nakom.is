@@ -1,0 +1,1 @@
+aws resourcegroupstaggingapi get-resources --tags-per-page 100 | jq '.ResourceTagMappingList[] | select(contains({Tags: [{Key: "MH-Project"} ]}) | not) | .ResourceARN' | tr -d '"' 

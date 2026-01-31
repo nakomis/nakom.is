@@ -269,6 +269,7 @@ export class ApiGatewayStack extends cdk.Stack {
             { path: "mu", file: "MUsic.jpeg", download: true},
             { path: "mupic", file: "MUsic.jpeg", download: false},
             { path: "privacy-policy", file: "privacy-policy.pdf" },
+            { path: "vimrc", file: ".vimrc", download: true },
         ];
 
         exceptions.forEach((exception) => {

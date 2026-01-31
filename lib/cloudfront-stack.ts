@@ -27,7 +27,7 @@ export class CloudfrontStack extends cdk.Stack {
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
             },
-            defaultRootObject: '/google',
+            defaultRootObject: '/social',
             domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk'],
             certificate: props!.certificate
         });
