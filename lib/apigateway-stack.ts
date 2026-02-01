@@ -4,14 +4,14 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 
-import { Function } from 'aws-cdk-lib/aws-lambda';
+import { Function, IFunction } from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import { CfnApiGatewayManagedOverrides, EndpointType } from 'aws-cdk-lib/aws-apigatewayv2';
 import { GetApiKeyCr } from './apikey-cr';
 import { LogGroup, QueryDefinition, QueryString, RetentionDays } from 'aws-cdk-lib/aws-logs';
 
 export interface ApiGatewayStackProps extends cdk.StackProps {
-    urlShortener: Function,
+    urlShortener: IFunction,
     bucket: s3.Bucket,
     executionRole: iam.Role
 }
@@ -223,7 +223,7 @@ export class ApiGatewayStack extends cdk.Stack {
         this.addAny405(staticFileResource);
     }
 
-    addLambda(urlShortener: Function) {
+    addLambda(urlShortener: IFunction) {
         const lambdaIntegration = new api.LambdaIntegration(urlShortener, {
             integrationResponses: [
                 {
