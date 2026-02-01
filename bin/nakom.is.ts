@@ -19,7 +19,7 @@ const s3Stack = new S3Stack(app, "S3Stack", londonEnv);
 const lambdaStack = new LambdaStack(app, "LambdaStack", londonEnv);
 const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
     ...londonEnv,
-    urlShortener: lambdaStack.getLambda(),
+    urlShortener: lambdaStack.getLambdaAlias(),
     bucket: s3Stack.s3bucket(),
     executionRole: s3Stack.executionRole()
 });

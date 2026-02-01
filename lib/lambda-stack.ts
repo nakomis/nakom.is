@@ -10,6 +10,7 @@ export interface LambdaStackProps extends cdk.StackProps {
 
 export class LambdaStack extends cdk.Stack {
     readonly redirectsFunction: lambda.Function;
+    readonly redirectsFunctionAlias: lambda.Alias;
     readonly redirectTable: dynamodb.TableV2;
 
     constructor(scope: Construct, id: string, props?: LambdaStackProps) {
@@ -36,10 +37,21 @@ export class LambdaStack extends cdk.Stack {
             logGroup: logGroup
         });
 
+        // Create an alias with provisioned concurrency to reduce cold starts
+        this.redirectsFunctionAlias = new lambda.Alias(this, 'RedirectsFunctionAlias', {
+            aliasName: 'live',
+            version: this.redirectsFunction.currentVersion,
+            provisionedConcurrentExecutions: 1,
+        });
+
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:GetItem", "dynamodb:PutItem");
     }
 
     getLambda(): lambda.Function {
         return this.redirectsFunction;
+    }
+
+    getLambdaAlias(): lambda.IFunction {
+        return this.redirectsFunctionAlias;
     }
 };
