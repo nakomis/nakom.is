@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
+import { Duration } from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
@@ -34,7 +35,8 @@ export class LambdaStack extends cdk.Stack {
             runtime: lambda.Runtime.PYTHON_3_12,
             code: lambda.Code.fromAsset('lambda'),
             handler: 'urlshortener.lambda_handler',
-            logGroup: logGroup
+            logGroup: logGroup,
+            timeout: Duration.seconds(10),
         });
 
         // Create an alias with provisioned concurrency to reduce cold starts
