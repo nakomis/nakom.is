@@ -28,7 +28,8 @@ def lambda_handler(event, context):
         return  {
                     'statusCode': 301,
                     'headers': {
-                        "Location": url
+                        "Location": url,
+                        "Cache-Control": "max-age=600"
                     }
                 }
                 
@@ -48,7 +49,8 @@ def google():
     return {
                 'statusCode': 301,
                 'headers': {
-                    "Location": 'https://www.google.co.uk'
+                    "Location": 'https://www.google.co.uk',
+                    "Cache-Control": "max-age=600"
                 }
             }
 
