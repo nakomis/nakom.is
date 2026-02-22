@@ -3,5 +3,6 @@
     30444,
     34892,
     32775
-  ]
+  ],
+  "ssm:account=637423226886:parameterName=/nakom.is/stream-url-domain:region=eu-west-2": "aredg5nzdwegolgbqvo5oyissu0bapcu.lambda-url.eu-west-2.on.aws"
 }

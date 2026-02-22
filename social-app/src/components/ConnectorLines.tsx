@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { TOOL_TO_LINK } from '../types';
 
 interface Connection {
   sourceId: string;
@@ -17,11 +18,21 @@ interface LineCoords {
   x2: number;
   y2: number;
   color: string;
+  sourceId: string;
 }
 
-function ConnectorLines() {
+interface ConnectorLinesProps {
+  activeTools: Set<string>;
+}
+
+function ConnectorLines({ activeTools }: ConnectorLinesProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [lines, setLines] = useState<LineCoords[]>([]);
+
+  // Derive which sourceIds are currently active
+  const activeSourceIds = new Set(
+    [...activeTools].map(tool => TOOL_TO_LINK[tool]).filter(Boolean)
+  );
 
   useEffect(() => {
     const updateLines = () => {
@@ -46,6 +57,7 @@ function ConnectorLines() {
             x2: chatRect.left - 4,
             y2: chatRect.top + 60 + connections.findIndex(c => c.sourceId === sourceId) * 40,
             color,
+            sourceId,
           };
         })
         .filter((l): l is LineCoords => l !== null);
@@ -98,6 +110,13 @@ function ConnectorLines() {
             <stop offset="100%" stopColor={line.color} stopOpacity="0.3" />
           </linearGradient>
         ))}
+        <filter id="blob-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
       </defs>
 
       {lines.map((line, i) => {
@@ -106,24 +125,26 @@ function ConnectorLines() {
         const cp2x = line.x2 - dx * 0.4;
 
         const path = `M ${line.x1} ${line.y1} C ${cp1x} ${line.y1}, ${cp2x} ${line.y2}, ${line.x2} ${line.y2}`;
+        const isActive = activeSourceIds.has(line.sourceId);
 
         return (
           <g key={i}>
-            {/* Glow effect */}
+            {/* Glow effect — brighter when active */}
             <path
               d={path}
               fill="none"
               stroke={line.color}
-              strokeWidth="6"
-              strokeOpacity="0.1"
+              strokeWidth={isActive ? 10 : 6}
+              strokeOpacity={isActive ? 0.2 : 0.1}
               strokeLinecap="round"
             />
-            {/* Main line */}
+            {/* Main line — faster dash animation when active */}
             <path
               d={path}
               fill="none"
               stroke={`url(#line-gradient-${i})`}
-              strokeWidth="2"
+              strokeWidth={isActive ? 3 : 2}
+              strokeOpacity={isActive ? 0.9 : 1}
               strokeDasharray="8 6"
               strokeLinecap="round"
             >
@@ -131,24 +152,33 @@ function ConnectorLines() {
                 attributeName="stroke-dashoffset"
                 from="28"
                 to="0"
-                dur="2s"
+                dur={isActive ? '0.8s' : '2s'}
                 repeatCount="indefinite"
               />
             </path>
-            {/* Source dot */}
+            {/* Source dot — pulses faster when active */}
             <circle
               cx={line.x1}
               cy={line.y1}
               r="4"
               fill={line.color}
               opacity="0.8"
+              filter={isActive ? 'url(#blob-glow)' : undefined}
             >
               <animate
                 attributeName="opacity"
                 values="0.4;0.9;0.4"
-                dur="2s"
+                dur={isActive ? '0.8s' : '2s'}
                 repeatCount="indefinite"
               />
+              {isActive && (
+                <animate
+                  attributeName="r"
+                  values="4;6;4"
+                  dur="0.8s"
+                  repeatCount="indefinite"
+                />
+              )}
             </circle>
             {/* Target dot */}
             <circle
@@ -158,6 +188,17 @@ function ConnectorLines() {
               fill={line.color}
               opacity="0.5"
             />
+            {/* Traveling blobs — only when tool is active */}
+            {isActive && (
+              <>
+                <circle r="5" fill={line.color} opacity="0.9" filter="url(#blob-glow)">
+                  <animateMotion dur="1.2s" repeatCount="indefinite" path={path} />
+                </circle>
+                <circle r="3.5" fill={line.color} opacity="0.6" filter="url(#blob-glow)">
+                  <animateMotion dur="1.2s" repeatCount="indefinite" path={path} begin="0.6s" />
+                </circle>
+              </>
+            )}
           </g>
         );
       })}
