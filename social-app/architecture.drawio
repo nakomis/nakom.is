@@ -1,0 +1,202 @@
+<mxfile host="app.diagrams.net" modified="2026-02-22" version="24.7.17" type="device">
+  <diagram id="social-app-arch" name="nakom.is Social App Architecture">
+    <mxGraphModel dx="1300" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ========== BROWSER ========== -->
+        <mxCell id="browser" value="&lt;b&gt;User Browser&lt;/b&gt;&lt;br/&gt;React 19 + TypeScript SPA&lt;br/&gt;Vite · FontAwesome" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#555555;fontColor=#333333;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="30" y="290" width="150" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ========== AWS EDGE LAYER ========== -->
+        <!-- CloudFront container -->
+        <mxCell id="cf-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E0;strokeColor=#FF9900;strokeWidth=2;arcSize=5;verticalAlign=top;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="230" y="170" width="220" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="cf-label" value="&lt;b style='color:#FF9900'&gt;Amazon CloudFront&lt;/b&gt;&lt;br/&gt;3 domains · HTTPS · CDN" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="230" y="173" width="220" height="40" as="geometry" />
+        </mxCell>
+        <!-- CF Function -->
+        <mxCell id="cf-function" value="&lt;b&gt;CloudFront Function&lt;/b&gt;&lt;br/&gt;&lt;i&gt;Viewer Request (JS 2.0)&lt;/i&gt;&lt;br/&gt;/social → 301 /&lt;br/&gt;/ → rewrite /social" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE0B2;strokeColor=#FF9900;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="248" y="220" width="184" height="80" as="geometry" />
+        </mxCell>
+        <!-- CloudFront domains note -->
+        <mxCell id="cf-domains" value="nakom.is · nakomis.com · nakomis.co.uk" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontStyle=2;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="230" y="308" width="220" height="30" as="geometry" />
+        </mxCell>
+        <!-- API Key injection note -->
+        <mxCell id="cf-apikey" value="Injects x-api-key header" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#777777;" vertex="1" parent="1">
+          <mxGeometry x="230" y="338" width="220" height="30" as="geometry" />
+        </mxCell>
+        <!-- CF caching note -->
+        <mxCell id="cf-cache" value="Cache disabled for /chat · GET cached for static" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=9;fontColor=#777777;" vertex="1" parent="1">
+          <mxGeometry x="230" y="365" width="220" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ========== API GATEWAY ========== -->
+        <mxCell id="apigw" value="&lt;b&gt;API Gateway&lt;/b&gt;&lt;br/&gt;Regional · REST · API key auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F3E8FF;strokeColor=#8C4FFF;strokeWidth=2;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="510" y="290" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== ROUTES ========== -->
+        <mxCell id="routes-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#4CAF50;strokeWidth=1;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="510" y="110" width="170" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="routes-label" value="&lt;b style='color:#2E7D32'&gt;Static Routes&lt;/b&gt;&lt;br/&gt;&lt;tt&gt;GET /&lt;/tt&gt; → social.html&lt;br/&gt;&lt;tt&gt;GET /static/{file}&lt;/tt&gt; → S3&lt;br/&gt;&lt;tt&gt;GET /cv&lt;/tt&gt; → cv.pdf&lt;br/&gt;&lt;tt&gt;GET /wordle&lt;/tt&gt; → wordle.html&lt;br/&gt;&lt;tt&gt;GET /{shortcode}&lt;/tt&gt; → Lambda" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=10;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="510" y="112" width="170" height="156" as="geometry" />
+        </mxCell>
+
+        <!-- ========== S3 PUBLIC BUCKET ========== -->
+        <mxCell id="s3-public" value="&lt;b&gt;S3 · nakom.is-static&lt;/b&gt;&lt;br/&gt;social.html · cv.pdf&lt;br/&gt;wordle.html · assets/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#3F8624;strokeWidth=2;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="750" y="110" width="180" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== CHAT LAMBDA ========== -->
+        <mxCell id="lambda-container" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E0;strokeColor=#FF9900;strokeWidth=2;arcSize=5;" vertex="1" parent="1">
+          <mxGeometry x="510" y="420" width="170" height="145" as="geometry" />
+        </mxCell>
+        <mxCell id="lambda-label" value="&lt;b style='color:#E65100'&gt;Lambda · nakomis-chat&lt;/b&gt;&lt;br/&gt;Node.js 20 · 256 MB · 30s" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="510" y="423" width="170" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lambda-detail" value="LangChain.js AgentExecutor&lt;br/&gt;ChatAnthropic · ≤5 tool rounds&lt;br/&gt;&lt;br/&gt;Rate limit · Email via SES&lt;br/&gt;API key from SSM" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;whiteSpace=wrap;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="510" y="460" width="170" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ========== CHAT ROUTE ========== -->
+        <mxCell id="chat-route" value="&lt;b&gt;POST /chat&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="510" y="392" width="170" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- ========== ANTHROPIC API ========== -->
+        <mxCell id="anthropic" value="&lt;b&gt;Anthropic API&lt;/b&gt;&lt;br/&gt;claude-haiku-4-5&lt;br/&gt;max_tokens: 1024" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=2;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="390" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== GITHUB API ========== -->
+        <mxCell id="github" value="&lt;b&gt;GitHub API&lt;/b&gt;&lt;br/&gt;repos · readme&lt;br/&gt;file contents (20KB cap)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#333333;strokeWidth=2;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="480" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== DYNAMODB ========== -->
+        <mxCell id="dynamodb" value="&lt;b&gt;DynamoDB&lt;/b&gt;&lt;br/&gt;chat-rate-limits&lt;br/&gt;100 req/day · TTL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#3F8624;strokeWidth=2;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="570" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== SES ========== -->
+        <mxCell id="ses" value="&lt;b&gt;SES&lt;/b&gt; · nakom.is domain&lt;br/&gt;Email contact requests&lt;br/&gt;to Martin's address" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#3F8624;strokeWidth=2;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="760" y="660" width="170" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== SSM PARAMETER STORE ========== -->
+        <mxCell id="ssm" value="&lt;b&gt;SSM Parameter Store&lt;/b&gt;&lt;br/&gt;/nakom.is/anthropic-api-key&lt;br/&gt;Fetched on cold start" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#3F8624;strokeWidth=2;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="420" width="185" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ========== PRIVATE S3 BUCKET ========== -->
+        <mxCell id="s3-private" value="&lt;b&gt;S3 · nakom.is-private&lt;/b&gt;&lt;br/&gt;cv.md · linkedin.md&lt;br/&gt;interests.md&lt;br/&gt;&lt;i&gt;Tool cache: 1 hr&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#3F8624;strokeWidth=2;fontSize=11;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="980" y="510" width="185" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ========== TOOLS LABEL ========== -->
+        <mxCell id="tools-label" value="&lt;b&gt;LangChain Tools&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=11;fontColor=#1565C0;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="362" width="170" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- ========== ARROWS ========== -->
+
+        <!-- Browser → CloudFront -->
+        <mxCell id="e-browser-cf" value="HTTPS" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#555555;fontSize=9;" edge="1" source="browser" target="cf-container" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- CloudFront → API Gateway -->
+        <mxCell id="e-cf-apigw" value="Origin request" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#8C4FFF;fontSize=9;" edge="1" source="cf-container" target="apigw" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API Gateway → Static Routes -->
+        <mxCell id="e-apigw-routes" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeColor=#4CAF50;fontSize=9;" edge="1" source="apigw" target="routes-container" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Static Routes → S3 Public -->
+        <mxCell id="e-routes-s3" value="AWS S3 integration" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3F8624;fontSize=9;" edge="1" source="routes-container" target="s3-public" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API Gateway → Chat Lambda -->
+        <mxCell id="e-apigw-lambda" value="Lambda proxy" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#FF9900;fontSize=9;" edge="1" source="apigw" target="lambda-container" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Chat Lambda → Anthropic -->
+        <mxCell id="e-lambda-anthropic" value="Claude Haiku" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#1565C0;fontSize=9;" edge="1" source="lambda-container" target="anthropic" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Chat Lambda → GitHub -->
+        <mxCell id="e-lambda-github" value="tool: repos/readme/files" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#333333;fontSize=9;" edge="1" source="lambda-container" target="github" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Chat Lambda → DynamoDB -->
+        <mxCell id="e-lambda-dynamo" value="rate check" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3F8624;fontSize=9;" edge="1" source="lambda-container" target="dynamodb" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Chat Lambda → SES -->
+        <mxCell id="e-lambda-ses" value="contact email" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3F8624;fontSize=9;" edge="1" source="lambda-container" target="ses" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="543" />
+              <mxPoint x="720" y="695" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Chat Lambda → SSM -->
+        <mxCell id="e-lambda-ssm" value="API key (cold start)" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.2;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3F8624;fontSize=9;" edge="1" source="lambda-container" target="ssm" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="449" />
+              <mxPoint x="720" y="455" />
+              <mxPoint x="980" y="455" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Chat Lambda → Private S3 -->
+        <mxCell id="e-lambda-s3priv" value="tool: cv/linkedin/interests" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.15;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#3F8624;fontSize=9;" edge="1" source="lambda-container" target="s3-private" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="441" />
+              <mxPoint x="940" y="441" />
+              <mxPoint x="940" y="550" />
+              <mxPoint x="980" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- ========== LEGEND ========== -->
+        <mxCell id="legend-bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFAFA;strokeColor=#CCCCCC;" vertex="1" parent="1">
+          <mxGeometry x="30" y="530" width="170" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="533" width="170" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-aws" value="AWS Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#3F8624;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="558" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-ext" value="External Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E3F2FD;strokeColor=#1565C0;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="590" width="150" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="leg-lambda-box" value="AWS Lambda / CloudFront" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF4E0;strokeColor=#FF9900;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="40" y="622" width="150" height="25" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

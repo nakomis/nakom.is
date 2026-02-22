@@ -23,12 +23,38 @@ export class CloudfrontStack extends cdk.Stack {
             }
         });
 
+        // Redirect /social → / (canonical URL), rewrite / → /social for origin
+        const socialRedirectFunction = new cloudfront.Function(this, 'SocialRedirectFunction', {
+            functionName: 'nakomis-social-redirect',
+            code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+    var uri = event.request.uri;
+    if (uri === '/social' || uri === '/social/') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: { location: { value: '/' } }
+        };
+    }
+    if (uri === '/') {
+        event.request.uri = '/social';
+    }
+    return event.request;
+}
+`),
+            runtime: cloudfront.FunctionRuntime.JS_2_0,
+        });
+
         this.distrubution = new cloudfront.Distribution(this, 'NakomIsDistribution', {
             comment: 'URL Shortener',
             defaultBehavior: {
                 origin: apiOrigin,
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-                viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+                viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                functionAssociations: [{
+                    function: socialRedirectFunction,
+                    eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+                }],
             },
             additionalBehaviors: {
                 'chat': {
@@ -39,7 +65,6 @@ export class CloudfrontStack extends cdk.Stack {
                     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                 },
             },
-            defaultRootObject: '/social',
             domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk'],
             certificate: props!.certificate
         });

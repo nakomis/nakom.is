@@ -11,6 +11,8 @@ import { CertificateStack } from '../lib/certificate-stack';
 import { IAMSecretStack } from '../lib/iam-secret-stack';
 import { SESStack } from '../lib/ses-stack';
 import { ChatStack } from '../lib/chat-stack';
+import { CvStack } from '../lib/cv-stack';
+import { LinkedInStack } from '../lib/linkedin-stack';
 
 const app = new cdk.App();
 
@@ -31,6 +33,7 @@ const chatStack = new ChatStack(app, 'ChatStack', {
     ...londonEnv,
     sesIdentity: sesStack.emailIdentity,
     sesFromAddress: sesStack.fromAddress,
+    privateBucket: s3Stack.privateBucket,
 });
 const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
     ...londonEnv,
@@ -60,6 +63,16 @@ const route53AdditionalStack = new Route53AdditionalStack(app, 'Route53Additiona
 const iamSecretStack = new IAMSecretStack(app, 'IAMSecretStack', {
     ...londonEnv,
     redirectsTable: lambdaStack.redirectTable
+});
+const cvStack = new CvStack(app, 'CvStack', {
+    ...londonEnv,
+    privateBucket: s3Stack.privateBucket,
+    publicBucket: s3Stack.bucket,
+    distribution: cloudfrontStack.distrubution,
+});
+const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
+    ...londonEnv,
+    privateBucket: s3Stack.privateBucket,
 });
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");

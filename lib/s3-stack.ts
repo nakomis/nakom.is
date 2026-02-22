@@ -12,6 +12,8 @@ export class S3Stack extends cdk.Stack {
     readonly bucketname = 'nakom.is-static';
     readonly bucket: s3.Bucket;
     readonly executionrole: iam.Role;
+    readonly privateBucketName = 'nakom.is-private';
+    readonly privateBucket: s3.Bucket;
 
     constructor(scope: Construct, id: string, props?: S3StackProps) {
         super(scope, id, props);
@@ -33,6 +35,20 @@ export class S3Stack extends cdk.Stack {
             enforceSSL: true,
             versioned: false,
             removalPolicy: RemovalPolicy.RETAIN,
+        });
+
+        // Private bucket for source documents not served publicly
+        this.privateBucket = new s3.Bucket(this, 'PrivateBucket', {
+            bucketName: this.privateBucketName,
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+            encryption: s3.BucketEncryption.S3_MANAGED,
+            enforceSSL: true,
+            versioned: false,
+            removalPolicy: RemovalPolicy.RETAIN,
+            // EventBridge notifications let CvStack and LinkedInStack subscribe without
+            // creating a cross-stack cyclic dependency (avoids S3EventSource which
+            // adds a bucket notification that references the Lambda ARN in another stack)
+            eventBridgeEnabled: true,
         });
 
         // Create a role to allow the API gateway to access the bucket

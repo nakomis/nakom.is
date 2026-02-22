@@ -4,6 +4,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ses from 'aws-cdk-lib/aws-ses';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -39,6 +40,7 @@ function loadSecrets(): { anthropicApiKey: string; martinEmail: string } {
 export interface ChatStackProps extends cdk.StackProps {
     sesIdentity: ses.EmailIdentity;
     sesFromAddress: string;
+    privateBucket: s3.Bucket;
 }
 
 export class ChatStack extends cdk.Stack {
@@ -84,6 +86,7 @@ export class ChatStack extends cdk.Stack {
                 RATE_LIMIT_TABLE: rateLimitTable.tableName,
                 MARTIN_EMAIL: secrets.martinEmail,
                 SES_FROM_EMAIL: props.sesFromAddress,
+                PRIVATE_BUCKET: props.privateBucket.bucketName,
             },
             bundling: {
                 minify: true,
@@ -110,5 +113,10 @@ export class ChatStack extends cdk.Stack {
                 `arn:${this.partition}:ses:${this.region}:${this.account}:identity/*@nakom.is`,
             ],
         }));
+
+        // Grant read access to private bucket for CV, LinkedIn, and interests
+        props.privateBucket.grantRead(this.chatFunction, 'cv.md');
+        props.privateBucket.grantRead(this.chatFunction, 'linkedin.md');
+        props.privateBucket.grantRead(this.chatFunction, 'interests.md');
     }
 }
