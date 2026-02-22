@@ -9,6 +9,8 @@ import { CloudfrontStack } from '../lib/cloudfront-stack';
 import { Route53AdditionalStack } from '../lib/route53-additional-stack';
 import { CertificateStack } from '../lib/certificate-stack';
 import { IAMSecretStack } from '../lib/iam-secret-stack';
+import { SESStack } from '../lib/ses-stack';
+import { ChatStack } from '../lib/chat-stack';
 
 const app = new cdk.App();
 
@@ -17,15 +19,25 @@ const nvirginiaEnv = { env: { account: '637423226886', region: 'us-east-1' } };
 
 const s3Stack = new S3Stack(app, "S3Stack", londonEnv);
 const lambdaStack = new LambdaStack(app, "LambdaStack", londonEnv);
+const r53Stack = new Route53Stack(app, 'Route53Stack', {
+    ...londonEnv,
+    crossRegionReferences: true
+});
+const sesStack = new SESStack(app, 'SESStack', {
+    ...londonEnv,
+    nakomIsZone: r53Stack.hostedZones.find(z => z.zoneName === 'nakom.is')!.zone,
+});
+const chatStack = new ChatStack(app, 'ChatStack', {
+    ...londonEnv,
+    sesIdentity: sesStack.emailIdentity,
+    sesFromAddress: sesStack.fromAddress,
+});
 const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
     ...londonEnv,
     urlShortener: lambdaStack.getLambdaAlias(),
     bucket: s3Stack.s3bucket(),
-    executionRole: s3Stack.executionRole()
-});
-const r53Stack = new Route53Stack(app, 'Route53Stack', {
-    ...londonEnv,
-    crossRegionReferences: true
+    executionRole: s3Stack.executionRole(),
+    chatFunction: chatStack.chatFunction,
 });
 const certificateStack = new CertificateStack(app, 'CertificateStack', {
     ...nvirginiaEnv,
