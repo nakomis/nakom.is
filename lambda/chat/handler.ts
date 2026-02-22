@@ -1,27 +1,38 @@
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import Anthropic from '@anthropic-ai/sdk';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
+import { HumanMessage, AIMessage, type BaseMessage } from '@langchain/core/messages';
+import { createToolCallingAgent, AgentExecutor } from 'langchain/agents';
 import { checkRateLimit } from './rate-limiter';
 import { fetchGitHubRepos } from './github';
 import { buildSystemPrompt } from './system-prompt';
+import { TOOLS } from './tools';
 
 const ssmClient = new SSMClient({});
 const sesClient = new SESClient({});
-let anthropicClient: Anthropic | null = null;
 
-async function getAnthropicClient(): Promise<Anthropic> {
-  if (anthropicClient) return anthropicClient;
+// Initialised once at cold start; reused across warm invocations
+let modelReady = false;
+let cachedModel: ChatAnthropic | null = null;
+
+async function getModel(): Promise<ChatAnthropic> {
+  if (cachedModel) return cachedModel;
 
   const result = await ssmClient.send(new GetParameterCommand({
     Name: '/nakom.is/anthropic-api-key',
     WithDecryption: true,
   }));
 
-  anthropicClient = new Anthropic({
+  // LangChain's ChatAnthropic reads ANTHROPIC_API_KEY from env if not passed directly
+  cachedModel = new ChatAnthropic({
+    model: 'claude-haiku-4-5-20251001',
+    maxTokens: 1024,
     apiKey: result.Parameter!.Value!,
   });
 
-  return anthropicClient;
+  modelReady = true;
+  return cachedModel;
 }
 
 interface ChatRequestBody {
@@ -55,7 +66,7 @@ export const handler = async (event: {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'messages array is required' }) };
     }
 
-    // Cap at 10 user turns (20 messages total for user+assistant pairs)
+    // Cap at 10 user turns (20 messages total)
     const messages = body.messages.slice(-20);
 
     // Validate message format
@@ -119,23 +130,56 @@ export const handler = async (event: {
       };
     }
 
-    // --- Normal chat path ---
+    // --- Normal chat path (LangChain tool-calling agent) ---
     const githubUser = process.env.GITHUB_USER || 'nakomis';
     const repos = await fetchGitHubRepos(githubUser);
-    const systemPrompt = buildSystemPrompt(repos);
+    const repoNames = repos.map(r => r.name);
+    const systemPromptText = buildSystemPrompt(repoNames);
 
-    const client = await getAnthropicClient();
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
+    // Separate the last user message (agent input) from prior history
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg.role !== 'user') {
+      return { statusCode: 400, headers, body: JSON.stringify({ error: 'Last message must be from user' }) };
+    }
+
+    const chatHistory: BaseMessage[] = messages.slice(0, -1).map(m =>
+      m.role === 'user' ? new HumanMessage(m.content) : new AIMessage(m.content)
+    );
+
+    // Build LangChain prompt template
+    const prompt = ChatPromptTemplate.fromMessages([
+      ['system', systemPromptText],
+      new MessagesPlaceholder('chat_history'),
+      ['human', '{input}'],
+      new MessagesPlaceholder('agent_scratchpad'),
+    ]);
+
+    const model = await getModel();
+    const agent = createToolCallingAgent({ llm: model, tools: TOOLS, prompt });
+    const executor = new AgentExecutor({
+      agent,
+      tools: TOOLS,
+      maxIterations: 10,
+      verbose: false,
     });
 
-    let assistantMessage = response.content
-      .filter(block => block.type === 'text')
-      .map(block => 'text' in block ? block.text : '')
-      .join('');
+    const result = await executor.invoke({
+      input: lastMsg.content,
+      chat_history: chatHistory,
+    });
+
+    let assistantMessage: string;
+    if (typeof result.output === 'string') {
+      assistantMessage = result.output;
+    } else if (Array.isArray(result.output)) {
+      // LangChain may return Anthropic content blocks: [{type:'text',text:'...'}]
+      assistantMessage = result.output
+        .filter((block: { type: string }) => block.type === 'text')
+        .map((block: { text: string }) => block.text)
+        .join('');
+    } else {
+      assistantMessage = JSON.stringify(result.output);
+    }
 
     // Detect the [REQUEST_EMAIL] token the AI may include to trigger the email UI
     let requestEmail = false;
