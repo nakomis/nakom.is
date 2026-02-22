@@ -52,7 +52,8 @@ const cloudfrontStack = new CloudfrontStack(app, 'CloudfrontStack', {
     gateway: apiGatewayStack.gateway,
     certificate: certificateStack.certificate,
     crossRegionReferences: true,
-    apiKeyString: apiGatewayStack.apiKeyString
+    apiKeyString: apiGatewayStack.apiKeyString,
+    enableStreamChat: true,
 });
 const route53AdditionalStack = new Route53AdditionalStack(app, 'Route53AdditionalStack', {
     ...londonEnv,

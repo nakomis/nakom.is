@@ -45,6 +45,8 @@ export interface ChatStackProps extends cdk.StackProps {
 
 export class ChatStack extends cdk.Stack {
     readonly chatFunction: NodejsFunction;
+    readonly streamChatFunction: NodejsFunction;
+    readonly streamFunctionUrl: lambda.FunctionUrl;
 
     constructor(scope: Construct, id: string, props: ChatStackProps) {
         super(scope, id, props);
@@ -118,5 +120,62 @@ export class ChatStack extends cdk.Stack {
         props.privateBucket.grantRead(this.chatFunction, 'cv.md');
         props.privateBucket.grantRead(this.chatFunction, 'linkedin.md');
         props.privateBucket.grantRead(this.chatFunction, 'interests.md');
+
+        // --- Streaming Chat Lambda (SSE via Function URL) ---
+        const streamLogGroup = new LogGroup(this, 'StreamChatLambdaLogs', {
+            logGroupName: '/nakom.is/lambda/chat-stream',
+            retention: RetentionDays.SIX_MONTHS,
+        });
+
+        this.streamChatFunction = new NodejsFunction(this, 'StreamChatFunction', {
+            functionName: 'nakomis-chat-stream',
+            entry: 'lambda/chat/stream-handler.ts',
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_20_X,
+            memorySize: 256,
+            timeout: Duration.seconds(60),
+            logGroup: streamLogGroup,
+            environment: {
+                DAILY_RATE_LIMIT: '100',
+                GITHUB_USER: 'nakomis',
+                RATE_LIMIT_TABLE: rateLimitTable.tableName,
+                PRIVATE_BUCKET: props.privateBucket.bucketName,
+            },
+            bundling: {
+                minify: true,
+                sourceMap: true,
+            },
+        });
+
+        rateLimitTable.grant(this.streamChatFunction, 'dynamodb:UpdateItem');
+        anthropicApiKeyParam.grantRead(this.streamChatFunction);
+        props.privateBucket.grantRead(this.streamChatFunction, 'cv.md');
+        props.privateBucket.grantRead(this.streamChatFunction, 'linkedin.md');
+        props.privateBucket.grantRead(this.streamChatFunction, 'interests.md');
+
+        // Allow CloudFront (via OAC) to invoke the streaming function URL.
+        // Both InvokeFunctionUrl AND InvokeFunction are required — without InvokeFunction,
+        // Lambda's "Block public access" feature rejects the OAC-signed request with 403.
+        this.streamChatFunction.addPermission('CloudFrontOACInvokeFunctionUrl', {
+            principal: new iam.ServicePrincipal('cloudfront.amazonaws.com'),
+            action: 'lambda:InvokeFunctionUrl',
+        });
+        this.streamChatFunction.addPermission('CloudFrontOACInvokeFunction', {
+            principal: new iam.ServicePrincipal('cloudfront.amazonaws.com'),
+            action: 'lambda:InvokeFunction',
+        });
+
+        this.streamFunctionUrl = this.streamChatFunction.addFunctionUrl({
+            authType: lambda.FunctionUrlAuthType.AWS_IAM,
+            invokeMode: lambda.InvokeMode.RESPONSE_STREAM,
+        });
+
+        // Store the URL domain in SSM so CloudfrontStack can look it up at synth time
+        // without creating a CloudFormation cross-stack export/import dependency.
+        new ssm.StringParameter(this, 'StreamUrlDomainParam', {
+            parameterName: '/nakom.is/stream-url-domain',
+            description: 'Domain of the streaming Lambda Function URL (for CloudFront origin)',
+            stringValue: cdk.Fn.select(2, cdk.Fn.split('/', this.streamFunctionUrl.url)),
+        });
     }
 }
