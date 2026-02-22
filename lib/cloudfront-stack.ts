@@ -17,15 +17,27 @@ export class CloudfrontStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: CloudfrontStackProps) {
         super(scope, id, props);
 
+        const apiOrigin = new origins.RestApiOrigin(props!.gateway, {
+            customHeaders: {
+                "x-api-key": props!.apiKeyString,
+            }
+        });
+
         this.distrubution = new cloudfront.Distribution(this, 'NakomIsDistribution', {
+            comment: 'URL Shortener',
             defaultBehavior: {
-                origin: new origins.RestApiOrigin(props!.gateway, {
-                    customHeaders: {
-                        "x-api-key": props!.apiKeyString,
-                    }
-                }),
+                origin: apiOrigin,
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+            },
+            additionalBehaviors: {
+                'chat': {
+                    origin: apiOrigin,
+                    allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+                    cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+                    originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+                    viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                },
             },
             defaultRootObject: '/social',
             domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk'],

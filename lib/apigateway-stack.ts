@@ -13,7 +13,8 @@ import { LogGroup, QueryDefinition, QueryString, RetentionDays } from 'aws-cdk-l
 export interface ApiGatewayStackProps extends cdk.StackProps {
     urlShortener: IFunction,
     bucket: s3.Bucket,
-    executionRole: iam.Role
+    executionRole: iam.Role,
+    chatFunction?: IFunction,
 }
 
 export class ApiGatewayStack extends cdk.Stack {
@@ -107,6 +108,9 @@ export class ApiGatewayStack extends cdk.Stack {
 
         this.addRoot();
         this.addStatic();
+        if (props?.chatFunction) {
+            this.addChat(props.chatFunction);
+        }
         this.addLambda(props!.urlShortener);
         this.addExceptions();
 
@@ -345,6 +349,33 @@ export class ApiGatewayStack extends cdk.Stack {
             exceptionalResource.addMethod("GET", exceptionIntegration, exceptionMethodOptions);
             this.addAny405(exceptionalResource);
         })
+    }
+
+    addChat(chatFunction: IFunction) {
+        const chatResource = this.gateway.root.addResource('chat');
+
+        const chatIntegration = new api.LambdaIntegration(chatFunction, {
+            proxy: true,
+        });
+
+        chatResource.addMethod('POST', chatIntegration, {
+            methodResponses: [
+                {
+                    statusCode: '200',
+                    responseParameters: {
+                        'method.response.header.Content-Type': true,
+                    },
+                },
+                {
+                    statusCode: '429',
+                    responseParameters: {
+                        'method.response.header.Content-Type': true,
+                    },
+                },
+            ],
+        });
+
+        this.addAny405(chatResource);
     }
 
     addAny405(resource: cdk.aws_apigateway.IResource) {

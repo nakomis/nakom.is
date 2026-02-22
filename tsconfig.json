@@ -34,6 +34,7 @@
     "lambda",
     "route53",
     "s3contents",
+    "social-app",
     "utils",
     "dist"
   ]

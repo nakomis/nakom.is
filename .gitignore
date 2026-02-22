@@ -13,3 +13,14 @@ dist
 
 # Vim swap files
 *.swp
+
+# Secrets (never commit)
+secrets.json
+
+# Social app build output
+social-app/dist
+social-app/node_modules
+
+# Lambda chat dependencies
+lambda/chat/node_modules
+lambda/chat/package-lock.json
