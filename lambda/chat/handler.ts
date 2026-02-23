@@ -74,7 +74,7 @@ export const handler = async (event: {
       if (!msg.role || !msg.content || !['user', 'assistant'].includes(msg.role)) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid message format' }) };
       }
-      if (typeof msg.content !== 'string' || msg.content.length > 2000) {
+      if (typeof msg.content !== 'string' || (msg.role === 'user' && msg.content.length > 2000)) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Message content must be a string under 2000 characters' }) };
       }
     }
