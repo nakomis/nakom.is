@@ -1,7 +1,7 @@
 import DOMPurify from 'dompurify';
 import type { ChatMessage as ChatMessageType } from '../types';
 
-const ALLOWED_TAGS = ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'code'];
+const ALLOWED_TAGS = ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'code', 'pre'];
 
 interface ChatMessageProps {
   message: ChatMessageType;
