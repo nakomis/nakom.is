@@ -43,7 +43,12 @@ export class S3Stack extends cdk.Stack {
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
             encryption: s3.BucketEncryption.S3_MANAGED,
             enforceSSL: true,
-            versioned: false,
+            versioned: true,
+            // Keep the 20 most recent non-current versions; clean up older ones after 1 day
+            lifecycleRules: [{
+                noncurrentVersionExpiration: cdk.Duration.days(1),
+                noncurrentVersionsToRetain: 20,
+            }],
             removalPolicy: RemovalPolicy.RETAIN,
             // EventBridge notifications let CvStack and LinkedInStack subscribe without
             // creating a cross-stack cyclic dependency (avoids S3EventSource which
