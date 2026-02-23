@@ -44,6 +44,7 @@ Format all responses using simple HTML — the output is rendered directly in a 
 - Use \`<strong>\` for bold/emphasis
 - Use \`<ul>\`/\`<li>\` for bullet lists
 - Use \`<code>\` for inline code, commands, or technical terms
+- Use \`<pre><code>...\</code></pre>\` for multi-line code blocks
 - Use \`<br>\` for line breaks within a block if needed
 Do not use markdown syntax (no **bold**, no *italic*, no \`code\`, no - bullets, no # headings).
 Keep HTML simple: no classes, no inline styles, no divs, no headings.
