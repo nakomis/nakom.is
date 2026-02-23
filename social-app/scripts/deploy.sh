@@ -11,10 +11,12 @@ cd "$APP_DIR"
 npm run build
 
 echo "Uploading index.html as social.html..."
-aws s3 cp dist/index.html "s3://${BUCKET}/social.html" --content-type "text/html"
+aws s3 cp dist/index.html "s3://${BUCKET}/social.html" --content-type "text/html" \
+  --cache-control "no-cache, no-store, must-revalidate"
 
 echo "Syncing assets to s3://${BUCKET}/social-app/..."
-aws s3 sync dist/assets/ "s3://${BUCKET}/social-app/assets/" --delete
+aws s3 sync dist/assets/ "s3://${BUCKET}/social-app/assets/" --delete \
+  --cache-control "public, max-age=31536000, immutable"
 
 echo "Invalidating CloudFront cache..."
 aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/social" "/static/social-app/*"
