@@ -9,6 +9,7 @@
     "watch": "tsc -w",
     "test": "jest",
     "cdk": "cdk",
+    "deploy": "bash scripts/deploy.sh",
     "update-toc": "npx markdown-toc -i README.md",
     "update-dependencies": "npx -y npm-check-updates -u && npm i"
   },
