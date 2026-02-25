@@ -20,6 +20,7 @@ export class CloudfrontStack extends cdk.Stack {
         super(scope, id, props);
 
         const apiOrigin = new origins.RestApiOrigin(props!.gateway, {
+            originId: "NakomIsApiOrigin",
             customHeaders: {
                 "x-api-key": props!.apiKeyString,
             }
@@ -80,6 +81,7 @@ function handler(event) {
 
             additionalBehaviors['chat-stream'] = {
                 origin: new origins.HttpOrigin(fnUrlDomain, {
+                    originId: "NakomIsChatStreamOrigin",
                     protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
                 }),
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
