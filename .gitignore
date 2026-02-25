@@ -17,6 +17,9 @@ dist
 # Secrets (never commit)
 secrets.json
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # Social app build output
 social-app/dist
 social-app/node_modules
