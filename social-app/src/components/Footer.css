@@ -1,0 +1,13 @@
+.app-footer {
+  margin-top: auto;
+  padding: .3rem;
+  text-align: left;
+  border-top: 1px solid #444;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: calc(10px + .75vmin);
+  grid-column: 1 / -1;
+}
+
+.app-footer a {
+  color: rgba(255, 255, 255, 0.3);
+}

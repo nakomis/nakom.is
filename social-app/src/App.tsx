@@ -2,6 +2,7 @@ import { useState } from 'react';
 import SocialLinks from './components/SocialLinks'
 import ChatWidget from './components/ChatWidget'
 import ConnectorLines from './components/ConnectorLines'
+import Footer from './components/Footer'
 
 function App() {
   const [activeTools, setActiveTools] = useState<Set<string>>(new Set());
@@ -12,6 +13,7 @@ function App() {
       <SocialLinks />
       <ChatWidget activeTools={activeTools} onActiveToolsChange={setActiveTools} />
       <ConnectorLines activeTools={activeTools} />
+      <Footer />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import 'source-map-support/register';
 import * as cdk from 'aws-cdk-lib';
+import * as fs from 'fs';
 import { ApiGatewayStack } from '../lib/apigateway-stack';
 import { Route53Stack } from '../lib/route53-stack';
 import { LambdaStack } from '../lib/lambda-stack';
@@ -77,3 +78,5 @@ const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
 });
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");
+const { version: infraVersion } = JSON.parse(fs.readFileSync('./version.json', 'utf-8'));
+cdk.Tags.of(app).add("MH-Version", infraVersion);

@@ -2,9 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$(dirname "$SCRIPT_DIR")"
-REPO_DIR="$(dirname "$APP_DIR")"
-BUCKET="nakom.is-static"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
 # --- Parse flags ---
 BUMP="patch"
@@ -16,7 +14,7 @@ for arg in "$@"; do
 done
 
 # --- Read current version ---
-VERSION_FILE="$APP_DIR/version.json"
+VERSION_FILE="$REPO_DIR/version.json"
 CURRENT_VERSION=$(node -e "process.stdout.write(require('$VERSION_FILE').version)")
 
 # Strip -SNAPSHOT suffix
@@ -29,7 +27,7 @@ fi
 # Parse semver parts
 IFS='.' read -r MAJOR MINOR PATCH <<< "$RELEASE_VERSION"
 
-echo "Preparing release: social/$RELEASE_VERSION"
+echo "Preparing release: infra/$RELEASE_VERSION"
 
 # --- Check git status ---
 cd "$REPO_DIR"
@@ -45,30 +43,19 @@ fi
 # --- Stamp release version ---
 echo "{ \"version\": \"$RELEASE_VERSION\" }" > "$VERSION_FILE"
 
-# --- Build ---
-echo "Building social-app..."
-cd "$APP_DIR"
-npm run build
+# --- CDK synth (validate before committing) ---
+echo "Running cdk synth..."
+cd "$REPO_DIR"
+AWS_PROFILE=nakom.is-admin cdk synth
 
 # --- Commit and tag ---
-cd "$REPO_DIR"
 git add "$VERSION_FILE"
-git commit -m "Release social/$RELEASE_VERSION"
-git tag "social/$RELEASE_VERSION"
+git commit -m "Release infra/$RELEASE_VERSION"
+git tag "infra/$RELEASE_VERSION"
 
-# --- Deploy to S3 / CloudFront ---
-DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, 'nakom.is')]].Id" --output text)
-
-echo "Uploading index.html as social.html..."
-aws s3 cp "$APP_DIR/dist/index.html" "s3://${BUCKET}/social.html" --content-type "text/html" \
-  --cache-control "no-cache, no-store, must-revalidate"
-
-echo "Syncing assets to s3://${BUCKET}/social-app/..."
-aws s3 sync "$APP_DIR/dist/assets/" "s3://${BUCKET}/social-app/assets/" --delete \
-  --cache-control "public, max-age=31536000, immutable"
-
-echo "Invalidating CloudFront cache..."
-aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/social" "/static/social-app/*"
+# --- Deploy ---
+echo "Deploying all stacks..."
+AWS_PROFILE=nakom.is-admin cdk deploy --all --require-approval never
 
 # --- Compute next SNAPSHOT ---
 case "$BUMP" in
@@ -80,9 +67,9 @@ esac
 # --- Bump to next SNAPSHOT ---
 echo "{ \"version\": \"$NEXT_VERSION\" }" > "$VERSION_FILE"
 git add "$VERSION_FILE"
-git commit -m "Bump social to $NEXT_VERSION"
+git commit -m "Bump infra to $NEXT_VERSION"
 
 # --- Push ---
 git push && git push --tags
 
-echo "Deploy complete! Released social/$RELEASE_VERSION, next: $NEXT_VERSION"
+echo "Deploy complete! Released infra/$RELEASE_VERSION, next: $NEXT_VERSION"
