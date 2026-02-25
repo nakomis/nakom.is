@@ -17,6 +17,7 @@ The purpose of this project is to create a URL shortener to redirect URLs such a
   * [S3 Bucket](#s3-bucket)
   * [Additional Route53 Records](#additional-route53-records)
   * [Creating, listing, and deleting shortcuts](#creating-listing-and-deleting-shortcuts)
+- [Social App](#social-app)
 - [Deployment order](#deployment-order)
 
 <!-- tocstop -->
@@ -94,6 +95,18 @@ The [nisl](scripts/nisl) script lists all shortcuts in a formatted table showing
 
 The [nisd](scripts/nisd) script deletes a shortcut by its short path (`nisd shortUrl`), removing the entry directly from the DynamoDB table.
 
+
+## Social App
+
+In addition to the URL shortener, nakom.is serves a React single-page application at the root path — a personal profile page with social links and an AI-powered chat assistant (Claude) that can answer questions about Martin's work experience, CV, GitHub projects, and interests.
+
+Key features:
+- **AI chat** powered by Claude Haiku via a LangChain.js agentic loop with tool use (reads CV, LinkedIn, GitHub repos, etc.)
+- **SSE streaming** via a Lambda Function URL (`invokeMode: RESPONSE_STREAM`) so tool-call events are delivered in real time
+- **Animated SVG connector lines** between the social link icons and the chat panel — blobs travel along the lines while a tool is active
+- **Email capture** — the AI can invite the visitor to leave contact details, forwarded to Martin via SES
+
+See [social-app/README.md](social-app/README.md) for full architecture details, API contract, component breakdown, and deployment instructions.
 
 ## Deployment order
 
