@@ -258,6 +258,14 @@ h1 {
   font-size: 0.9em;
   outline: none;
   transition: border-color 0.2s;
+  resize: none;
+  min-height: 40px;
+  max-height: 120px;
+  overflow-y: auto;
+  field-sizing: content;
+  font-family: inherit;
+  line-height: 1.4;
+  align-self: flex-end;
 }
 
 .chat-input:focus {
@@ -289,6 +297,53 @@ h1 {
 }
 
 /* Email input (shown in place of chat input when AI requests contact) */
+.email-input-area {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.email-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.email-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.additional-info-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background-color: #1a1a1a;
+  color: white;
+  font-size: 0.9em;
+  outline: none;
+  transition: border-color 0.3s;
+  resize: none;
+  min-height: 60px;
+  max-height: 120px;
+  overflow-y: auto;
+  field-sizing: content;
+  font-family: inherit;
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.additional-info-input:focus {
+  border-color: #2563eb;
+}
+
+.additional-info-input::placeholder {
+  color: #666;
+}
+
 .email-icon {
   color: #888;
   font-size: 1.2em;
