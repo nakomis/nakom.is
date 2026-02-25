@@ -1,13 +1,22 @@
 .app-footer {
-  margin-top: auto;
-  padding: .3rem;
-  text-align: left;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: .3rem .3rem .3rem 80px;
   border-top: 1px solid #444;
+  background-color: black;
   color: rgba(255, 255, 255, 0.3);
   font-size: calc(10px + .75vmin);
-  grid-column: 1 / -1;
+  z-index: 100;
 }
 
 .app-footer a {
   color: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 800px) {
+  .app-footer {
+    padding-left: 20px;
+  }
 }
