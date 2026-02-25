@@ -30,6 +30,7 @@ function ChatWidget({ activeTools, onActiveToolsChange }: ChatWidgetProps) {
   const [error, setError] = useState<string | null>(null);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [emailInput, setEmailInput] = useState('');
+  const [additionalInfo, setAdditionalInfo] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // Track when each tool was activated so we can enforce a minimum visible duration
   const toolStartTimes = useRef<Map<string, number>>(new Map());
@@ -155,7 +156,7 @@ function ChatWidget({ activeTools, onActiveToolsChange }: ChatWidgetProps) {
       const response = await fetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, emailAddress: emailInput }),
+        body: JSON.stringify({ messages, emailAddress: emailInput, additionalInfo: additionalInfo.trim() || undefined }),
       });
 
       if (response.status === 429) {
@@ -172,6 +173,7 @@ function ChatWidget({ activeTools, onActiveToolsChange }: ChatWidgetProps) {
       setMessages([...messages, { role: 'assistant', content: data.message }]);
       setShowEmailInput(false);
       setEmailInput('');
+      setAdditionalInfo('');
     } catch {
       setError('Failed to connect. Please check your connection and try again.');
     } finally {
@@ -191,6 +193,12 @@ function ChatWidget({ activeTools, onActiveToolsChange }: ChatWidgetProps) {
       e.preventDefault();
       submitEmail();
     }
+    if (e.key === 'Escape') {
+      setShowEmailInput(false);
+    }
+  };
+
+  const handleAdditionalInfoKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setShowEmailInput(false);
     }
@@ -231,37 +239,51 @@ function ChatWidget({ activeTools, onActiveToolsChange }: ChatWidgetProps) {
           {isAtLimit ? (
             <div className="chat-limit">Conversation limit reached. Refresh to start a new chat.</div>
           ) : showEmailInput ? (
-            <div className="chat-input-area">
-              <i className="fas fa-envelope email-icon"></i>
-              <div className={`email-input-wrapper${isEmailValid ? ' valid' : ''}`}>
-                <input
-                  className="email-input"
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  onKeyDown={handleEmailKeyDown}
-                  placeholder="your@email.com"
-                  disabled={isLoading}
-                  autoFocus
-                />
-                <span className="email-valid-icon">✓</span>
+            <div className="chat-input-area email-input-area">
+              <div className="email-row">
+                <i className="fas fa-envelope email-icon"></i>
+                <div className={`email-input-wrapper${isEmailValid ? ' valid' : ''}`}>
+                  <input
+                    className="email-input"
+                    type="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                    onKeyDown={handleEmailKeyDown}
+                    placeholder="your@email.com"
+                    disabled={isLoading}
+                    autoFocus
+                  />
+                  <span className="email-valid-icon">✓</span>
+                </div>
               </div>
-              <button className="chat-send" onClick={submitEmail} disabled={isLoading || !isEmailValid}>
-                Send
-              </button>
-              <button className="email-skip" onClick={() => setShowEmailInput(false)} disabled={isLoading}>
-                Skip
-              </button>
+              <textarea
+                className="additional-info-input"
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+                onKeyDown={handleAdditionalInfoKeyDown}
+                placeholder="Anything else you'd like to include? (optional)"
+                disabled={isLoading}
+                rows={2}
+              />
+              <div className="email-buttons">
+                <button className="chat-send" onClick={submitEmail} disabled={isLoading || !isEmailValid}>
+                  Send
+                </button>
+                <button className="email-skip" onClick={() => setShowEmailInput(false)} disabled={isLoading}>
+                  Skip
+                </button>
+              </div>
             </div>
           ) : (
             <div className="chat-input-area">
-              <input
+              <textarea
                 className="chat-input"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message..."
                 disabled={isLoading}
+                rows={1}
               />
               <button className="chat-send" onClick={sendMessage} disabled={isLoading || !input.trim()}>
                 Send
