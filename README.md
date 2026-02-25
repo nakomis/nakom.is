@@ -1,6 +1,6 @@
 # nakom.is - A URL Shortener using AWS
 
-The purpose of this project is to create a URL shortener to redirect URLs such as [nakom.is/w](https://nakom.is/w) to any specified URL. In this case, the BBC Weather page for my part of Edinburgh.
+This project covers two things: a URL shortener that redirects short URLs such as [nakom.is/w](https://nakom.is/w) to longer ones (in this case, the BBC Weather page for my part of Edinburgh), and a personal profile page with an AI chat assistant that serves as the default root page at [nakom.is](https://nakom.is).
 
 ## Table of Contents
 
