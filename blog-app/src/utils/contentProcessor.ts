@@ -6,16 +6,10 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeStringify from 'rehype-stringify';
 import matter from 'gray-matter';
 import { BlogPost, BlogPostListItem } from '../types';
-
-// This will be populated at build time
-declare const BLOG_POSTS: BlogPost[];
+import { BLOG_POSTS } from '../content.generated';
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
-  // In development, return empty array - posts loaded at build time
-  if (import.meta.env.DEV) {
-    return [];
-  }
-  return BLOG_POSTS;
+  return BLOG_POSTS as unknown as BlogPost[];
 }
 
 export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
