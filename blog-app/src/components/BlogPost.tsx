@@ -1,51 +1,46 @@
 import React from 'react';
-import { BlogPost } from '../types';
+import { BlogPost as BlogPostType } from '../types';
 
 interface BlogPostProps {
-  post: BlogPost;
+  post: BlogPostType;
 }
 
 export default function BlogPost({ post }: BlogPostProps) {
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
+  const { frontmatter, html } = post;
 
   return (
     <article className="blog-post">
       <header className="post-header">
-        <h1>{post.frontmatter.title}</h1>
+        <h1>{frontmatter.title}</h1>
         <div className="post-meta">
-          <span className="post-date">{formatDate(post.frontmatter.date)}</span>
-          <span className="post-author">by {post.frontmatter.author}</span>
+          <time dateTime={frontmatter.date}>
+            {new Date(frontmatter.date).toLocaleDateString('en-GB', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </time>
+          <span className="author">by {frontmatter.author}</span>
         </div>
-        {post.frontmatter.tags.length > 0 && (
-          <div className="post-tags">
-            {post.frontmatter.tags.map((tag) => (
-              <span key={tag} className="tag">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="post-tags">
+          {frontmatter.tags.map(tag => (
+            <span key={tag} className="tag">
+              {tag}
+            </span>
+          ))}
+        </div>
       </header>
 
       <div
         className="post-content"
-        dangerouslySetInnerHTML={{ __html: post.html }}
+        dangerouslySetInnerHTML={{ __html: html }}
       />
 
       <footer className="post-footer">
-        <div className="canonical-link">
-          <p>
-            <strong>Canonical URL:</strong>{' '}
-            <a href={post.frontmatter.canonical}>{post.frontmatter.canonical}</a>
-          </p>
-        </div>
+        <p>
+          <strong>Canonical URL:</strong>{' '}
+          <a href={frontmatter.canonical}>{frontmatter.canonical}</a>
+        </p>
       </footer>
     </article>
   );

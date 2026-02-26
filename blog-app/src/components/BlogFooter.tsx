@@ -4,29 +4,19 @@ export default function BlogFooter() {
   return (
     <footer className="blog-footer">
       <div className="container">
-        <div className="footer-content">
-          <div className="ethical-ads">
-            <div className="ad-placeholder">
-              {/* EthicalAds placement - no intrusive/animated ads */}
-              <div className="ethical-ad">
-                <small>Advertisement</small>
-              </div>
-            </div>
-          </div>
-
-          <div className="footer-info">
-            <p>
-              <strong>Martin Harris</strong> — Hardware meets cloud.
-            </p>
-            <p>
-              All code is <a href="https://creativecommons.org/public-domain/cc0/">CC0</a> unless otherwise noted.
-              Knowledge shared freely.
-            </p>
-            <p>
-              <a href="https://github.com/sponsors/nakomis">GitHub Sponsors</a> •
-              <a href="https://nakom.is">nakom.is</a>
-            </p>
-          </div>
+        <p>
+          © 2026 Martin Harris. All content licensed under{' '}
+          <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">
+            CC0
+          </a>
+          .
+        </p>
+        <p>
+          <em>"Ceci n'est pas une API Gateway"</em> — Making cloud abstractions tangible through physical hardware.
+        </p>
+        {/* EthicalAds placeholder */}
+        <div className="ethical-ads-placeholder">
+          <div className="ad-notice">Ad space reserved for EthicalAds</div>
         </div>
       </div>
     </footer>
