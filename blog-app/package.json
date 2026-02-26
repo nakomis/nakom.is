@@ -1,36 +1,31 @@
 {
-  "name": "blog-nakom-is",
-  "version": "0.1.0",
+  "name": "blog-app",
   "private": true,
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.0",
+    "react-router-dom": "^6.28.0",
     "unified": "^11.0.4",
     "remark": "^15.0.1",
+    "remark-frontmatter": "^5.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.0",
-    "remark-gfm": "^4.0.0",
-    "rehype-sanitize": "^6.0.0",
+    "rehype-highlight": "^7.0.0",
     "rehype-stringify": "^10.0.0",
-    "gray-matter": "^4.0.3",
-    "date-fns": "^4.1.0"
+    "gray-matter": "^4.0.3"
   },
   "devDependencies": {
-    "@types/react": "^19.0.1",
-    "@types/react-dom": "^19.0.1",
-    "@vitejs/plugin-react": "^4.3.3",
-    "typescript": "^5.6.2",
-    "vite": "^6.0.1",
-    "eslint": "^9.15.0",
-    "@typescript-eslint/eslint-plugin": "^8.15.0",
-    "@typescript-eslint/parser": "^8.15.0"
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.0"
   }
 }
