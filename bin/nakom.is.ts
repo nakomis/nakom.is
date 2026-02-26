@@ -14,6 +14,7 @@ import { SESStack } from '../lib/ses-stack';
 import { ChatStack } from '../lib/chat-stack';
 import { CvStack } from '../lib/cv-stack';
 import { LinkedInStack } from '../lib/linkedin-stack';
+import { BlogStack } from '../lib/blog-stack';
 
 const app = new cdk.App();
 
@@ -75,6 +76,12 @@ const cvStack = new CvStack(app, 'CvStack', {
 const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
     ...londonEnv,
     privateBucket: s3Stack.privateBucket,
+});
+const blogStack = new BlogStack(app, 'BlogStack', {
+    ...nvirginiaEnv,
+    domainName: 'blog.nakom.is',
+    hostedZone: r53Stack.nakomIsHostedZone,
+    crossRegionReferences: true,
 });
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");

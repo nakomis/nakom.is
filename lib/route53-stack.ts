@@ -18,11 +18,12 @@ export type R53Zone = {
 
 export class Route53Stack extends cdk.Stack {
     readonly hostedZones: R53Zone[] = [];
+    readonly nakomIsHostedZone: route53.HostedZone;
 
     constructor(scope: Construct, id: string, props?: Route53StackProps) {
         super(scope, id, props);
 
-        const nakomIsHostedZone = new route53.HostedZone(this, 'NakomIsHostedZone', {
+        this.nakomIsHostedZone = new route53.HostedZone(this, 'NakomIsHostedZone', {
             zoneName: 'nakom.is',
         });
         const nakomisComHostedZone = new route53.HostedZone(this, 'NakomisComHostedZone', {
@@ -32,7 +33,7 @@ export class Route53Stack extends cdk.Stack {
             zoneName: 'nakomis.co.uk',
         });
 
-        this.hostedZones.push({zoneName: nakomIsHostedZone.zoneName, zone: nakomIsHostedZone, legacyRecords: legacyNakomIs});
+        this.hostedZones.push({zoneName: this.nakomIsHostedZone.zoneName, zone: this.nakomIsHostedZone, legacyRecords: legacyNakomIs});
         this.hostedZones.push({zoneName: nakomisComHostedZone.zoneName, zone: nakomisComHostedZone, legacyRecords: legacyNakomisCom});
         this.hostedZones.push({zoneName: nakomisCoUkHostedZone.zoneName, zone: nakomisCoUkHostedZone, legacyRecords: legacyNakomisCoUk});
 

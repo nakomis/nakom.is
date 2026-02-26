@@ -36,6 +36,7 @@
     "s3contents",
     "social-app",
     "utils",
-    "dist"
+    "dist",
+    "blog-app"
   ]
 }
