@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function BlogHeader() {
   return (
     <header className="blog-header">

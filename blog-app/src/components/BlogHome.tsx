@@ -1,4 +1,3 @@
-import React from 'react';
 import { BlogPostListItem } from '../types';
 
 interface BlogHomeProps {

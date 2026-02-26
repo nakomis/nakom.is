@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
-import { BlogPost as BlogPostType } from './types';
-import { getBlogPostBySlug } from './utils/contentProcessor';
+import { BlogPost as BlogPostType, BlogPostListItem } from './types';
+import { getBlogPostBySlug, getBlogPosts, getBlogPostList } from './utils/contentProcessor';
 import BlogHeader from './components/BlogHeader';
 import BlogFooter from './components/BlogFooter';
 import BlogHome from './components/BlogHome';
 import BlogPost from './components/BlogPost';
-import AdPlaceholder from './components/AdPlaceholder';
 import './App.css';
 
 const PostPage: React.FC = () => {
@@ -80,7 +79,48 @@ const PostPage: React.FC = () => {
       <BlogHeader />
       <main className="main-content">
         <BlogPost post={post} />
-        <AdPlaceholder />
+      </main>
+      <BlogFooter />
+    </div>
+  );
+};
+
+const HomePage: React.FC = () => {
+  const [posts, setPosts] = useState<BlogPostListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadPosts() {
+      try {
+        const allPosts = await getBlogPosts();
+        const postList = getBlogPostList(allPosts);
+        setPosts(postList);
+      } catch (err) {
+        console.error('Failed to load posts:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPosts();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="container">
+        <BlogHeader />
+        <main className="main-content">
+          <div className="loading">Loading...</div>
+        </main>
+        <BlogFooter />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container">
+      <BlogHeader />
+      <main className="main-content">
+        <BlogHome posts={posts} />
       </main>
       <BlogFooter />
     </div>
@@ -91,7 +131,7 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<BlogHome />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/:slug" element={<PostPage />} />
       </Routes>
     </Router>
