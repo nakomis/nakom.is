@@ -1,6 +1,3 @@
-// This will be populated at build time
-declare const BLOG_POSTS: BlogPost[];
-
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkFrontmatter from 'remark-frontmatter';
@@ -9,6 +6,9 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeStringify from 'rehype-stringify';
 import matter from 'gray-matter';
 import { BlogPost, BlogPostListItem } from '../types';
+
+// This will be populated at build time
+declare const BLOG_POSTS: BlogPost[];
 
 export async function getBlogPosts(): Promise<BlogPost[]> {
   // In development, return empty array - posts loaded at build time
