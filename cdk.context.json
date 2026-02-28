@@ -13,5 +13,31 @@
   "hosted-zone:account=637423226886:domainName=silverknoweseastway.org:region=eu-west-2": {
     "Id": "/hostedzone/Z04498661YQXXWP8EEIHY",
     "Name": "silverknoweseastway.org."
+  },
+  "vpc-provider:account=637423226886:filter.vpc-id=vpc-04203d503fc2fce95:region=eu-west-2:returnAsymmetricSubnets=true": {
+    "vpcId": "vpc-04203d503fc2fce95",
+    "vpcCidrBlock": "10.0.0.0/16",
+    "ownerAccountId": "637423226886",
+    "availabilityZones": [],
+    "subnetGroups": [
+      {
+        "name": "Private",
+        "type": "Isolated",
+        "subnets": [
+          {
+            "subnetId": "subnet-06d71dd56234a9008",
+            "cidr": "10.0.0.0/24",
+            "availabilityZone": "eu-west-2a",
+            "routeTableId": "rtb-06a47b32dcb797689"
+          },
+          {
+            "subnetId": "subnet-0c0718420efcbb3fe",
+            "cidr": "10.0.1.0/24",
+            "availabilityZone": "eu-west-2b",
+            "routeTableId": "rtb-04e3db220935636af"
+          }
+        ]
+      }
+    ]
   }
 }

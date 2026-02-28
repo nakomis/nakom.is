@@ -85,6 +85,7 @@ const blogStack = new BlogStack(app, 'BlogStack', {
     certificate: certificateStack.blogCertificate,
     crossRegionReferences: true
 });
+// VPC-enabled Lambda for PostgreSQL queries
 const postgresQueryStack = new PostgresQueryStack(app, 'PostgresQueryStack', londonEnv);
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");

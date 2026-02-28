@@ -44,8 +44,8 @@ function obfuscateEmail(email: string): string {
 
 function obfuscatePhoneNumber(text: string): string {
   // Common phone patterns: +44 123 456 7890, (555) 123-4567, 555-123-4567, etc.
-  const phoneRegex = /(?:\+\d{1,3}\s?)?(?:\(\d{3}\)|\d{3})[\s\-.]?\d{3}[\s\-.]?\d{4}/g;
-  return text.replace(phoneRegex, '***-***-****');
+  const phoneRegex = /(?:\+\d{1,3}\s?)?(?:\(\d{3}\)|\d{3})[\s\-.]?\d{3}[\s\-.]?(\d{4})/g;
+  return text.replace(phoneRegex, (match, lastFour) => `***-***-${lastFour}`);
 }
 
 function obfuscateUserMessage(message: string): string {

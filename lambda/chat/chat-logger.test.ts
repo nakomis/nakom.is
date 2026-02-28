@@ -71,7 +71,7 @@ describe('buildLogEntry', () => {
 
     expect(entry.ip).toBe('192.168.***.***');
     expect(entry.userMessage).toContain('joh***@***.com');
-    expect(entry.userMessage).toContain('***-***-****');
+    expect(entry.userMessage).toContain('***-***-4567');
     expect(entry.userMessage).toContain('*** ***');
     expect(entry.userAgent).toContain('x.x.x');
   });
