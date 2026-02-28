@@ -124,6 +124,7 @@ function handler(event) {
 
         this.distrubution = new cloudfront.Distribution(this, 'NakomIsDistribution', {
             comment: 'URL Shortener',
+            defaultRootObject: 'social',
             defaultBehavior: {
                 origin: apiOrigin,
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
