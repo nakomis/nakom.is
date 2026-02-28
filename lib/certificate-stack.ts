@@ -24,7 +24,7 @@ export class CertificateStack extends cdk.Stack {
 
         this.certificate = new cm.Certificate(this, "NakomIsCert", {
             domainName: 'nakom.is',
-            subjectAlternativeNames: ['nakomis.com', 'nakomis.co.uk'],
+            subjectAlternativeNames: ['nakomis.com', 'nakomis.co.uk', 'silverknoweseastway.com', 'silverknoweseastway.org'],
             validation: cm.CertificateValidation.fromDnsMultiZone(dnsMultiZone)
         });
     }
