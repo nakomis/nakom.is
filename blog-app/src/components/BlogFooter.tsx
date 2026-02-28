@@ -3,11 +3,11 @@ export default function BlogFooter() {
     <footer className="blog-footer">
       <div className="container">
         <p>
-          © 2026 Martin Harris. All content licensed under{' '}
-          <a href="https://creativecommons.org/publicdomain/zero/1.0/" target="_blank" rel="noopener">
-            CC0
-          </a>
-          .
+          © 2026 Martin Harris. All rights reserved.{' '}
+          <a href="https://github.com/nakomis/nakom.is" target="_blank" rel="noopener">
+            Website code
+          </a>{' '}
+          licensed under CC0.
         </p>
         <p>
           <em>"Ceci n'est pas une API Gateway"</em> — Making cloud abstractions tangible through physical hardware.

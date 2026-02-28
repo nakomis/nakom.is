@@ -1,14 +1,14 @@
 export default function BlogHeader() {
   return (
-    <header className="blog-header">
-      <div className="container">
-        <h1>
-          <a href="/">Martin Harris</a>
-        </h1>
-        <nav>
-          <a href="/">Home</a>
-          <a href="https://nakom.is">Main Site</a>
-        </nav>
+    <header className="header">
+      <div className="header-content">
+        <img src="/logo.svg" alt="nakom.is" className="logo" />
+        <a href="/" className="site-title">
+          blog.nakom.is
+        </a>
+        <div className="site-subtitle">
+          Hardware meets cloud
+        </div>
       </div>
     </header>
   );

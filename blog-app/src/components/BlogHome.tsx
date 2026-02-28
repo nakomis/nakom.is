@@ -7,7 +7,7 @@ interface BlogHomeProps {
 export default function BlogHome({ posts }: BlogHomeProps) {
   return (
     <div className="blog-home">
-      <section className="hero">
+      <section className="blog-intro">
         <h1>Martin Harris</h1>
         <p className="tagline">
           <em>"Ceci n'est pas une API Gateway"</em>
@@ -20,7 +20,7 @@ export default function BlogHome({ posts }: BlogHomeProps) {
         {posts.length === 0 ? (
           <p>No posts yet. Coming soon!</p>
         ) : (
-          <div className="post-list">
+          <div className="posts-list">
             {posts.map(post => (
               <article key={post.slug} className="post-preview">
                 <h3>
