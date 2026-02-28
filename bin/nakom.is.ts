@@ -81,7 +81,7 @@ const blogStack = new BlogStack(app, 'BlogStack', {
     ...londonEnv,
     domainName: 'blog.nakom.is',
     hostedZone: r53Stack.nakomIsHostedZone,
-    certificate: certificateStack.certificate,
+    certificate: certificateStack.blogCertificate,
     crossRegionReferences: true
 });
 
