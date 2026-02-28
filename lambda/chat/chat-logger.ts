@@ -59,8 +59,7 @@ function obfuscateUserMessage(message: string): string {
   // Obfuscate phone numbers
   obfuscated = obfuscatePhoneNumber(obfuscated);
 
-  // Obfuscate potential names (sequences of 2+ capitalized words)
-  obfuscated = obfuscated.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?\b/g, '*** ***');
+  // Note: Name obfuscation removed - only emails and phone numbers should be obfuscated
 
   // If message is very long, truncate with indicator
   if (obfuscated.length > 500) {
@@ -125,8 +124,8 @@ export function buildLogEntry(input: LogEntryInput): LogEntry {
     logType: 'CVCHAT',
     sk: `${timestamp}#${requestId}`,
     conversationId: input.conversationId,
-    ip: obfuscateIP(rawIP),
-    userAgent: obfuscateUserAgent(rawUserAgent),
+    ip: rawIP,
+    userAgent: rawUserAgent,
     country,
     userMessage: obfuscateUserMessage(input.userMessage),
     messageCount: input.messageCount,

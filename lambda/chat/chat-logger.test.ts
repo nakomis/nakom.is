@@ -10,7 +10,7 @@ describe('buildLogEntry', () => {
     requestContext: {},
   };
 
-  it('extracts the first IP from X-Forwarded-For and obfuscates it', () => {
+  it('extracts the first IP from X-Forwarded-For without obfuscation', () => {
     const entry = buildLogEntry({
       event: baseEvent,
       conversationId: 'conv-123',
@@ -23,7 +23,7 @@ describe('buildLogEntry', () => {
       rateLimited: false,
     });
 
-    expect(entry.ip).toBe('203.0.***.***');
+    expect(entry.ip).toBe('203.0.113.42');
     expect(entry.logType).toBe('CVCHAT');
     expect(entry.userMessage).toBe('Hello');
     expect(entry.toolsCalled).toEqual(new Set(['get_cv']));
@@ -48,7 +48,7 @@ describe('buildLogEntry', () => {
     expect(entry.ttl).toBeLessThanOrEqual(now + oneYear + 5);
   });
 
-  it('obfuscates PII in user messages', () => {
+  it('obfuscates only emails and phone numbers in user messages', () => {
     const eventWithPII = {
       headers: {
         'x-forwarded-for': '192.168.1.100',
@@ -69,10 +69,10 @@ describe('buildLogEntry', () => {
       rateLimited: false,
     });
 
-    expect(entry.ip).toBe('192.168.***.***');
-    expect(entry.userMessage).toContain('joh***@***.com');
-    expect(entry.userMessage).toContain('***-***-4567');
-    expect(entry.userMessage).toContain('*** ***');
-    expect(entry.userAgent).toContain('x.x.x');
+    expect(entry.ip).toBe('192.168.1.100');
+    expect(entry.userMessage).toContain('joh***@***.com'); // Email obfuscated
+    expect(entry.userMessage).toContain('***-***-4567'); // Phone obfuscated
+    expect(entry.userMessage).toContain('John Smith'); // Names NOT obfuscated
+    expect(entry.userAgent).toBe('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'); // User agent NOT obfuscated
   });
 });
