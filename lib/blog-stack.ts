@@ -24,7 +24,7 @@ export class BlogStack extends Stack {
 
     // S3 bucket for blog static files
     this.bucket = new s3.Bucket(this, 'BlogBucket', {
-      bucketName: `blog-nakom-is-${this.account}`,
+      bucketName: `blog-nakom-is-${this.region}-${this.account}`,
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
