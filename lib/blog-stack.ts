@@ -11,6 +11,7 @@ import { Construct } from 'constructs';
 export interface BlogStackProps extends StackProps {
   readonly domainName: string;
   readonly hostedZone: route53.IHostedZone;
+  readonly certificate: cm.ICertificate;
 }
 
 export class BlogStack extends Stack {
@@ -20,7 +21,7 @@ export class BlogStack extends Stack {
   constructor(scope: Construct, id: string, props: BlogStackProps) {
     super(scope, id, props);
 
-    const { domainName, hostedZone } = props;
+    const { domainName, hostedZone, certificate } = props;
 
     // S3 bucket for blog static files
     this.bucket = new s3.Bucket(this, 'BlogBucket', {
@@ -28,12 +29,6 @@ export class BlogStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-    });
-
-    // SSL certificate for blog domain (must be in us-east-1 for CloudFront)
-    const certificate = new cm.Certificate(this, 'BlogCertificate', {
-      domainName: domainName,
-      validation: cm.CertificateValidation.fromDns(hostedZone),
     });
 
     // CloudFront distribution

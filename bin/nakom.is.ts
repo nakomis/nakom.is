@@ -78,9 +78,10 @@ const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
     privateBucket: s3Stack.privateBucket,
 });
 const blogStack = new BlogStack(app, 'BlogStack', {
-    ...nvirginiaEnv,
+    ...londonEnv,
     domainName: 'blog.nakom.is',
     hostedZone: r53Stack.nakomIsHostedZone,
+    certificate: certificateStack.certificate,
     crossRegionReferences: true
 });
 
