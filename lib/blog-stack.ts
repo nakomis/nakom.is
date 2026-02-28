@@ -30,10 +30,11 @@ export class BlogStack extends Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
-    // SSL certificate for blog domain
+    // SSL certificate for blog domain (must be in us-east-1 for CloudFront)
     const certificate = new cm.Certificate(this, 'BlogCertificate', {
       domainName: domainName,
       validation: cm.CertificateValidation.fromDns(hostedZone),
+      region: 'us-east-1',
     });
 
     // CloudFront distribution
