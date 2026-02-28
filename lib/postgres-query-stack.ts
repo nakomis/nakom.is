@@ -37,6 +37,8 @@ export class PostgresQueryStack extends cdk.Stack {
       bundling: {
         minify: false, // Keep readable for debugging
         sourceMap: true,
+        externalModules: ['pg'], // pg needs to be provided by Lambda layer or runtime
+        nodeModules: ['pg'], // Include pg in the deployment package
       },
     });
 

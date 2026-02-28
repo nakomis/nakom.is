@@ -3,6 +3,83 @@ import { randomUUID } from 'crypto';
 
 const dynamoClient = new DynamoDBClient({});
 
+// PII obfuscation functions
+function obfuscateIP(ip: string): string {
+  if (ip === 'unknown') return ip;
+
+  // IPv4: 192.168.1.100 → 192.168.***.***
+  if (ip.includes('.')) {
+    const parts = ip.split('.');
+    if (parts.length === 4) {
+      return `${parts[0]}.${parts[1]}.***.***`;
+    }
+  }
+
+  // IPv6: 2001:db8::1 → 2001:db8::***
+  if (ip.includes(':')) {
+    const parts = ip.split(':');
+    if (parts.length >= 3) {
+      return `${parts[0]}:${parts[1]}::***`;
+    }
+  }
+
+  return '***';
+}
+
+function obfuscateEmail(email: string): string {
+  const emailRegex = /([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+  return email.replace(emailRegex, (match, localPart, domain) => {
+    const obfuscatedLocal = localPart.length <= 3
+      ? localPart.charAt(0) + '***'
+      : localPart.substring(0, 3) + '***';
+
+    const domainParts = domain.split('.');
+    const obfuscatedDomain = domainParts.length >= 2
+      ? '***.' + domainParts[domainParts.length - 1]
+      : '***';
+
+    return `${obfuscatedLocal}@${obfuscatedDomain}`;
+  });
+}
+
+function obfuscatePhoneNumber(text: string): string {
+  // Common phone patterns: +44 123 456 7890, (555) 123-4567, 555-123-4567, etc.
+  const phoneRegex = /(?:\+\d{1,3}\s?)?(?:\(\d{3}\)|\d{3})[\s\-.]?\d{3}[\s\-.]?\d{4}/g;
+  return text.replace(phoneRegex, '***-***-****');
+}
+
+function obfuscateUserMessage(message: string): string {
+  if (!message || message.length === 0) return message;
+
+  let obfuscated = message;
+
+  // Obfuscate emails
+  obfuscated = obfuscateEmail(obfuscated);
+
+  // Obfuscate phone numbers
+  obfuscated = obfuscatePhoneNumber(obfuscated);
+
+  // Obfuscate potential names (sequences of 2+ capitalized words)
+  obfuscated = obfuscated.replace(/\b[A-Z][a-z]+ [A-Z][a-z]+(?:\s[A-Z][a-z]+)?\b/g, '*** ***');
+
+  // If message is very long, truncate with indicator
+  if (obfuscated.length > 500) {
+    obfuscated = obfuscated.substring(0, 500) + '... [TRUNCATED]';
+  }
+
+  return obfuscated;
+}
+
+function obfuscateUserAgent(userAgent: string): string {
+  if (userAgent === 'unknown') return userAgent;
+
+  // Keep browser/OS info but remove version details that could be identifying
+  return userAgent
+    .replace(/\d+\.\d+(?:\.\d+)*/g, 'x.x.x') // Version numbers (2 or 3+ parts)
+    .replace(/[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}/ig, 'XXXX-XXXX') // UUIDs
+    .substring(0, 200); // Truncate very long UAs
+}
+
 export interface LogEntryInput {
   event: any;
   conversationId: string;
@@ -35,8 +112,8 @@ export interface LogEntry {
 export function buildLogEntry(input: LogEntryInput): LogEntry {
   const headers = input.event?.headers ?? {};
   const forwarded: string = headers['x-forwarded-for'] ?? headers['X-Forwarded-For'] ?? '';
-  const ip = forwarded.split(',')[0]?.trim() || 'unknown';
-  const userAgent: string = headers['user-agent'] ?? headers['User-Agent'] ?? 'unknown';
+  const rawIP = forwarded.split(',')[0]?.trim() || 'unknown';
+  const rawUserAgent: string = headers['user-agent'] ?? headers['User-Agent'] ?? 'unknown';
   const country: string = headers['cloudfront-viewer-country'] ?? headers['CloudFront-Viewer-Country'] ?? 'unknown';
 
   const now = new Date();
@@ -48,10 +125,10 @@ export function buildLogEntry(input: LogEntryInput): LogEntry {
     logType: 'CVCHAT',
     sk: `${timestamp}#${requestId}`,
     conversationId: input.conversationId,
-    ip,
-    userAgent,
+    ip: obfuscateIP(rawIP),
+    userAgent: obfuscateUserAgent(rawUserAgent),
     country,
-    userMessage: input.userMessage,
+    userMessage: obfuscateUserMessage(input.userMessage),
     messageCount: input.messageCount,
     toolsCalled: new Set(input.toolsCalled),
     inputTokens: input.inputTokens,
