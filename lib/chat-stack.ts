@@ -99,6 +99,13 @@ export class ChatStack extends cdk.Stack {
         // Grant DynamoDB access
         rateLimitTable.grant(this.chatFunction, 'dynamodb:UpdateItem');
 
+        // Grant access to chat logs table
+        this.chatFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['dynamodb:PutItem'],
+            resources: ['arn:aws:dynamodb:eu-west-2:637423226886:table/nakomis-chat-logs']
+        }));
+
         // Grant SSM read access for the Anthropic API key
         anthropicApiKeyParam.grantRead(this.chatFunction);
 
@@ -148,6 +155,14 @@ export class ChatStack extends cdk.Stack {
         });
 
         rateLimitTable.grant(this.streamChatFunction, 'dynamodb:UpdateItem');
+
+        // Grant access to chat logs table for stream function
+        this.streamChatFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['dynamodb:PutItem'],
+            resources: ['arn:aws:dynamodb:eu-west-2:637423226886:table/nakomis-chat-logs']
+        }));
+
         anthropicApiKeyParam.grantRead(this.streamChatFunction);
         props.privateBucket.grantRead(this.streamChatFunction, 'cv.md');
         props.privateBucket.grantRead(this.streamChatFunction, 'linkedin.md');
