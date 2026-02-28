@@ -60,6 +60,14 @@ export class PostgresQueryStack extends cdk.Stack {
       'PostgreSQL access from Lambda'
     );
 
+    // Also allow nakom-admin import functions to connect to RDS
+    // Security group ID from nakom-admin project's Lambda functions
+    rdsAccessSecurityGroup.addIngressRule(
+      ec2.Peer.securityGroupId('sg-06567fecd4893e94f'),
+      ec2.Port.tcp(5432),
+      'PostgreSQL access from nakom-admin import functions'
+    );
+
     // Create the Lambda function
     this.queryFunction = new lambda.Function(this, 'PostgresQueryFunction', {
       runtime: lambda.Runtime.PYTHON_3_11,
