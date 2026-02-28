@@ -26,7 +26,8 @@ export class CloudfrontStack extends cdk.Stack {
             }
         });
 
-        // Redirect /social → / (canonical URL), rewrite / → /social for origin
+        // Redirect /social → / (canonical URL)
+        // Note: / → /social mapping now handled by defaultRootObject
         const socialRedirectFunction = new cloudfront.Function(this, 'SocialRedirectFunction', {
             functionName: 'nakomis-social-redirect',
             code: cloudfront.FunctionCode.fromInline(`
@@ -38,9 +39,6 @@ function handler(event) {
             statusDescription: 'Moved Permanently',
             headers: { location: { value: '/' } }
         };
-    }
-    if (uri === '/') {
-        event.request.uri = '/social';
     }
     return event.request;
 }

@@ -5,5 +5,13 @@
     32775,
     37013
   ],
-  "ssm:account=637423226886:parameterName=/nakom.is/stream-url-domain:region=eu-west-2": "aredg5nzdwegolgbqvo5oyissu0bapcu.lambda-url.eu-west-2.on.aws"
+  "ssm:account=637423226886:parameterName=/nakom.is/stream-url-domain:region=eu-west-2": "aredg5nzdwegolgbqvo5oyissu0bapcu.lambda-url.eu-west-2.on.aws",
+  "hosted-zone:account=637423226886:domainName=silverknoweseastway.com:region=eu-west-2": {
+    "Id": "/hostedzone/Z07592141C7HX6VUWSFPS",
+    "Name": "silverknoweseastway.com."
+  },
+  "hosted-zone:account=637423226886:domainName=silverknoweseastway.org:region=eu-west-2": {
+    "Id": "/hostedzone/Z04498661YQXXWP8EEIHY",
+    "Name": "silverknoweseastway.org."
+  }
 }
