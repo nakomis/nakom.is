@@ -48,6 +48,32 @@ function handler(event) {
             runtime: cloudfront.FunctionRuntime.JS_2_0,
         });
 
+        // Redirect silverknoweseastway domains to nakom.is
+        const silverknowesRedirectFunction = new cloudfront.Function(this, 'SilverknowesRedirectFunction', {
+            functionName: 'nakomis-silverknowes-redirect',
+            code: cloudfront.FunctionCode.fromInline(`
+function handler(event) {
+    var request = event.request;
+    var host = request.headers.host.value;
+
+    // Redirect silverknoweseastway domains to nakom.is
+    if (host === 'silverknoweseastway.com' || host === 'silverknoweseastway.org') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: {
+                location: { value: 'https://nakom.is/' }
+            }
+        };
+    }
+
+    // Continue normal processing for other domains
+    return request;
+}
+`),
+            runtime: cloudfront.FunctionRuntime.JS_2_0,
+        });
+
         const additionalBehaviors: Record<string, cloudfront.BehaviorOptions> = {
             'chat': {
                 origin: apiOrigin,
@@ -102,13 +128,19 @@ function handler(event) {
                 origin: apiOrigin,
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-                functionAssociations: [{
-                    function: socialRedirectFunction,
-                    eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-                }],
+                functionAssociations: [
+                    {
+                        function: socialRedirectFunction,
+                        eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+                    },
+                    {
+                        function: silverknowesRedirectFunction,
+                        eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+                    }
+                ],
             },
             additionalBehaviors,
-            domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk'],
+            domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk', 'silverknoweseastway.com', 'silverknoweseastway.org'],
             certificate: props!.certificate,
         });
 
