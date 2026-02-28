@@ -34,7 +34,6 @@ export class BlogStack extends Stack {
     const certificate = new cm.Certificate(this, 'BlogCertificate', {
       domainName: domainName,
       validation: cm.CertificateValidation.fromDns(hostedZone),
-      region: 'us-east-1',
     });
 
     // CloudFront distribution

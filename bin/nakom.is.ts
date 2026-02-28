@@ -78,9 +78,10 @@ const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
     privateBucket: s3Stack.privateBucket,
 });
 const blogStack = new BlogStack(app, 'BlogStack', {
-    ...londonEnv,
+    ...nvirginiaEnv,
     domainName: 'blog.nakom.is',
     hostedZone: r53Stack.nakomIsHostedZone,
+    crossRegionReferences: true
 });
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");
