@@ -194,6 +194,7 @@ export const handler = awslambda.streamifyResponse(
       ]);
 
       const model = await getModel();
+      const requestStartMs = Date.now();
       const sseHandler = new SSECallbackHandler(responseStream);
       const agent = createToolCallingAgent({ llm: model, tools: TOOLS, prompt });
       const executor = new AgentExecutor({
