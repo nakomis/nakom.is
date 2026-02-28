@@ -5,10 +5,12 @@ import { HumanMessage, AIMessage, type BaseMessage } from '@langchain/core/messa
 import { BaseCallbackHandler } from '@langchain/core/callbacks/base';
 import { createToolCallingAgent, AgentExecutor } from 'langchain/agents';
 import type { Serialized } from '@langchain/core/load/serializable';
+import type { LLMResult } from '@langchain/core/outputs';
 import { checkRateLimit } from './rate-limiter';
 import { fetchGitHubRepos } from './github';
 import { buildSystemPrompt } from './system-prompt';
 import { TOOLS } from './tools';
+import { buildLogEntry, writeLogEntry } from './chat-logger';
 
 // Types for the awslambda global (available in Node.js 20 Lambda runtime with RESPONSE_STREAM)
 declare global {
@@ -63,6 +65,9 @@ class SSECallbackHandler extends BaseCallbackHandler {
   awaitHandlers = true; // Ensure event ordering
   private stream: awslambda.ResponseStream;
   private runIdToToolName = new Map<string, string>();
+  readonly toolsCalledInRun: string[] = [];
+  inputTokens = 0;
+  outputTokens = 0;
 
   constructor(stream: awslambda.ResponseStream) {
     super();
@@ -80,6 +85,7 @@ class SSECallbackHandler extends BaseCallbackHandler {
   ): Promise<void> {
     const toolName = runName || tool.id?.[tool.id.length - 1] || 'unknown';
     this.runIdToToolName.set(runId, toolName);
+    this.toolsCalledInRun.push(toolName);
     writeSSE(this.stream, 'tool_start', { tool: toolName });
   }
 
@@ -91,15 +97,25 @@ class SSECallbackHandler extends BaseCallbackHandler {
     this.runIdToToolName.delete(runId);
     writeSSE(this.stream, 'tool_end', { tool: toolName });
   }
+
+  async handleLLMEnd(output: LLMResult): Promise<void> {
+    const usage = output.llmOutput?.tokenUsage;
+    if (usage) {
+      this.inputTokens += usage.promptTokens ?? 0;
+      this.outputTokens += usage.completionTokens ?? 0;
+    }
+  }
 }
 
 interface ChatRequestBody {
   messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  conversationId?: string;
 }
 
 // --- Main streaming handler ---
 export const handler = awslambda.streamifyResponse(
   async (event: any, responseStream: awslambda.ResponseStream, _context: any) => {
+    console.log('Stream handler invoked with event:', JSON.stringify(event, null, 2));
     responseStream.setContentType('text/event-stream');
 
     try {
@@ -112,6 +128,7 @@ export const handler = awslambda.streamifyResponse(
       }
 
       const body: ChatRequestBody = JSON.parse(rawBody);
+      console.log('Stream: Parsed request body, conversationId:', body.conversationId, 'messages:', body.messages?.length);
 
       if (!body.messages || !Array.isArray(body.messages) || body.messages.length === 0) {
         writeSSE(responseStream, 'error', { error: 'messages array is required' });
@@ -140,7 +157,9 @@ export const handler = awslambda.streamifyResponse(
 
       // Rate limiting
       const dailyLimit = parseInt(process.env.DAILY_RATE_LIMIT || '100', 10);
+      console.log('Stream: Checking rate limit with daily limit:', dailyLimit);
       const { allowed, remaining } = await checkRateLimit(dailyLimit);
+      console.log('Stream: Rate limit check result - allowed:', allowed, 'remaining:', remaining);
 
       if (!allowed) {
         writeSSE(responseStream, 'error', { error: 'Daily rate limit exceeded. Please try again tomorrow.' });
@@ -184,10 +203,12 @@ export const handler = awslambda.streamifyResponse(
         verbose: false,
       });
 
+      console.log('Stream: Executing agent with input:', lastMsg.content.substring(0, 100) + '...');
       const result = await executor.invoke(
         { input: lastMsg.content, chat_history: chatHistory },
         { callbacks: [sseHandler] },
       );
+      console.log('Stream: Agent execution completed, tools called:', sseHandler.toolsCalledInRun.length);
 
       // Process final output (same logic as handler.ts)
       let assistantMessage: string;
@@ -213,6 +234,25 @@ export const handler = awslambda.streamifyResponse(
         remaining,
         ...(requestEmail && { requestEmail: true }),
       });
+
+      const logsTable = process.env.CV_CHAT_LOGS_TABLE;
+      console.log('Stream: Attempting to log to table:', logsTable);
+      if (logsTable) {
+        const logEntry = buildLogEntry({
+          event,
+          conversationId: body.conversationId ?? 'unknown',
+          userMessage: lastMsg.content,
+          messageCount: messages.length,
+          toolsCalled: sseHandler.toolsCalledInRun,
+          inputTokens: sseHandler.inputTokens,
+          outputTokens: sseHandler.outputTokens,
+          durationMs: Date.now() - requestStartMs,
+          rateLimited: false,
+        });
+        writeLogEntry(logEntry, logsTable)
+          .then(() => console.log('Stream: Chat log entry written successfully'))
+          .catch(err => console.error('Stream: Chat log write failed (non-fatal):', err));
+      }
 
       writeSSE(responseStream, 'done', {});
     } catch (err) {

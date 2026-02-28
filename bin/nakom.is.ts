@@ -15,6 +15,7 @@ import { ChatStack } from '../lib/chat-stack';
 import { CvStack } from '../lib/cv-stack';
 import { LinkedInStack } from '../lib/linkedin-stack';
 import { BlogStack } from '../lib/blog-stack';
+import { PostgresQueryStack } from '../lib/postgres-query-stack';
 
 const app = new cdk.App();
 
@@ -84,6 +85,7 @@ const blogStack = new BlogStack(app, 'BlogStack', {
     certificate: certificateStack.blogCertificate,
     crossRegionReferences: true
 });
+const postgresQueryStack = new PostgresQueryStack(app, 'PostgresQueryStack', londonEnv);
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");
 const { version: infraVersion } = JSON.parse(fs.readFileSync('./version.json', 'utf-8'));

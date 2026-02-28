@@ -67,6 +67,22 @@ export class ChatStack extends cdk.Stack {
             timeToLiveAttribute: 'expiry',
         });
 
+        // DynamoDB Table for CV chat request logging
+        const cvChatLogsTable = new dynamodb.TableV2(this, 'CvChatLogs', {
+            tableName: 'cv-chat-logs',
+            partitionKey: { name: 'logType', type: dynamodb.AttributeType.STRING },
+            sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+            timeToLiveAttribute: 'ttl',
+            billing: dynamodb.Billing.onDemand(),
+        });
+
+        // SSM cursor for analytics import - last timestamp successfully imported to RDS analytics DB
+        new ssm.StringParameter(this, 'CvChatImportCursor', {
+            parameterName: '/nakom.is/analytics/CVCHAT/last-imported-timestamp',
+            description: 'Timestamp of last CV chat record imported to RDS analytics DB',
+            stringValue: '1970-01-01T00:00:00.000Z',
+        });
+
         // Log Group
         const logGroup = new LogGroup(this, 'ChatLambdaLogs', {
             logGroupName: '/nakom.is/lambda/chat',
@@ -89,6 +105,7 @@ export class ChatStack extends cdk.Stack {
                 MARTIN_EMAIL: secrets.martinEmail,
                 SES_FROM_EMAIL: props.sesFromAddress,
                 PRIVATE_BUCKET: props.privateBucket.bucketName,
+                CV_CHAT_LOGS_TABLE: cvChatLogsTable.tableName,
             },
             bundling: {
                 minify: true,
@@ -98,13 +115,7 @@ export class ChatStack extends cdk.Stack {
 
         // Grant DynamoDB access
         rateLimitTable.grant(this.chatFunction, 'dynamodb:UpdateItem');
-
-        // Grant access to chat logs table
-        this.chatFunction.addToRolePolicy(new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: ['dynamodb:PutItem'],
-            resources: ['arn:aws:dynamodb:eu-west-2:637423226886:table/nakomis-chat-logs']
-        }));
+        cvChatLogsTable.grant(this.chatFunction, 'dynamodb:PutItem');
 
         // Grant SSM read access for the Anthropic API key
         anthropicApiKeyParam.grantRead(this.chatFunction);
@@ -147,6 +158,7 @@ export class ChatStack extends cdk.Stack {
                 GITHUB_USER: 'nakomis',
                 RATE_LIMIT_TABLE: rateLimitTable.tableName,
                 PRIVATE_BUCKET: props.privateBucket.bucketName,
+                CV_CHAT_LOGS_TABLE: cvChatLogsTable.tableName,
             },
             bundling: {
                 minify: true,
@@ -155,13 +167,7 @@ export class ChatStack extends cdk.Stack {
         });
 
         rateLimitTable.grant(this.streamChatFunction, 'dynamodb:UpdateItem');
-
-        // Grant access to chat logs table for stream function
-        this.streamChatFunction.addToRolePolicy(new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: ['dynamodb:PutItem'],
-            resources: ['arn:aws:dynamodb:eu-west-2:637423226886:table/nakomis-chat-logs']
-        }));
+        cvChatLogsTable.grant(this.streamChatFunction, 'dynamodb:PutItem');
 
         anthropicApiKeyParam.grantRead(this.streamChatFunction);
         props.privateBucket.grantRead(this.streamChatFunction, 'cv.md');
