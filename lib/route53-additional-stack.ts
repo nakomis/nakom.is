@@ -21,6 +21,13 @@ export class Route53AdditionalStack extends cdk.Stack {
                 zone: zone.zone,
                 target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(props!.cloudfront))
             });
+
+            // Create the AAAA Alias record for IPv6, pointing to the CDN
+            new route53.AaaaRecord(this, `${zone.zoneName}AAAAApiGateway`, {
+                recordName: zone.zoneName,
+                zone: zone.zone,
+                target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(props!.cloudfront))
+            });
         });
     }
 };
