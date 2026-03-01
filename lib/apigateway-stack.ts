@@ -268,6 +268,7 @@ export class ApiGatewayStack extends cdk.Stack {
             { path: "wordle", file: "wordle.html" },
             { path: "social", file: "social.html" },
             { path: "robots.txt", file: "robots.txt" },
+            { path: "ads.txt", file: "ads.txt" },
             { path: "favicon.ico", file: "favicon.ico" },
             { path: "static", file: "static.html", pathExists: true },
             { path: "mu", file: "MUsic.jpeg", download: true},
