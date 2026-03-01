@@ -46,16 +46,15 @@ a:hover {
 .header {
   background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
   border-bottom: 1px solid #404040;
-  padding: 2.5rem 2rem;
+  padding: 2rem 2rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  text-align: center;
 }
 
 .header-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 0.6rem;
+  gap: 2rem;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -63,21 +62,13 @@ a:hover {
 .logo {
   height: 120px;
   width: auto;
-  margin-bottom: 0.5rem;
+  flex-shrink: 0;
 }
 
-.site-title {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.9rem;
-  font-weight: 400;
-  text-decoration: none;
-  font-family: 'Roboto', sans-serif;
-  letter-spacing: 0.5px;
-}
-
-.site-title:hover {
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
+.hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .hero-name {
@@ -98,7 +89,6 @@ a:hover {
 .hero-description {
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.7);
-  max-width: 600px;
   font-weight: 300;
   margin: 0;
 }
@@ -411,12 +401,20 @@ a:hover {
     padding: 1.5rem 1rem;
   }
 
+  .header-content {
+    gap: 1.25rem;
+  }
+
   .logo {
-    height: 90px;
+    height: 80px;
   }
 
   .hero-name {
-    font-size: 2rem;
+    font-size: 1.8rem;
+  }
+
+  .hero-tagline {
+    font-size: 1rem;
   }
 
   .main-content {
@@ -453,11 +451,11 @@ a:hover {
 
 @media (max-width: 480px) {
   .hero-name {
-    font-size: 1.7rem;
+    font-size: 1.5rem;
   }
 
   .logo {
-    height: 70px;
+    height: 60px;
   }
 
   .post-title {
