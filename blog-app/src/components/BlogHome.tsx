@@ -7,14 +7,6 @@ interface BlogHomeProps {
 export default function BlogHome({ posts }: BlogHomeProps) {
   return (
     <div className="blog-home">
-      <section className="blog-intro">
-        <h1>Martin Harris</h1>
-        <p className="tagline">
-          <em>"Ceci n'est pas une API Gateway"</em>
-        </p>
-        <p>Making cloud abstractions tangible through physical hardware.</p>
-      </section>
-
       <section className="posts">
         <h2>Latest Articles</h2>
         {posts.length === 0 ? (

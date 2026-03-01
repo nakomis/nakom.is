@@ -2,13 +2,15 @@ export default function BlogHeader() {
   return (
     <header className="header">
       <div className="header-content">
-        <img src="/logo.svg" alt="nakom.is" className="logo" />
-        <a href="/" className="site-title">
-          blog.nakom.is
+        <a href="/">
+          <img src="/logo-shaded-transparent.png" alt="nakom.is" className="logo" />
         </a>
-        <div className="site-subtitle">
-          Hardware meets cloud
-        </div>
+        <a href="/" className="site-title">blog.nakom.is</a>
+        <h1 className="hero-name">Martin Harris</h1>
+        <p className="hero-tagline">
+          <em>"Ceci n'est pas une API Gateway"</em>
+        </p>
+        <p className="hero-description">Making cloud abstractions tangible through physical hardware.</p>
       </div>
     </header>
   );
