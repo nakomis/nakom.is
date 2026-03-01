@@ -39,6 +39,7 @@ a:hover {
 
 .main-content {
   padding: 2rem;
+  padding-bottom: 6rem;
   flex: 1;
 }
 
@@ -60,15 +61,22 @@ a:hover {
 }
 
 .logo {
-  height: 120px;
+  height: 150px;
   width: auto;
   flex-shrink: 0;
 }
 
 .hero-text {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  text-align: center;
+}
+
+.header-spacer {
+  width: 150px;
+  flex-shrink: 0;
 }
 
 .hero-name {
@@ -84,6 +92,15 @@ a:hover {
   color: #81c784;
   font-style: italic;
   margin: 0;
+}
+
+.hero-tagline a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.hero-tagline a:hover {
+  color: #a5d6a7;
 }
 
 .hero-description {
@@ -153,18 +170,27 @@ a:hover {
 
 /* Post cards - MUI Paper inspired */
 .post-preview {
+  position: relative;
   background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
   padding: 2rem;
   border-radius: 12px;
   border: 1px solid #404040;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
 }
 
 .post-preview:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
   border-color: #1976d2;
+}
+
+/* Stretch the title link to cover the entire card */
+.post-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
 }
 
 .post-preview h3 {
@@ -221,18 +247,6 @@ a:hover {
   border: 1px solid rgba(25, 118, 210, 0.3);
 }
 
-.read-more {
-  color: #1976d2;
-  font-weight: 500;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: color 0.2s ease;
-}
-
-.read-more:hover {
-  color: #42a5f5;
-}
 
 /* Blog post page styles */
 .blog-post {
@@ -342,42 +356,35 @@ a:hover {
   border-radius: 0 8px 8px 0;
 }
 
-/* Footer styles */
-.footer {
-  background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-  border-top: 1px solid #404040;
-  padding: 2rem;
+/* Footer styles — fixed to viewport bottom */
+.blog-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #111111;
+  border-top: 1px solid #2a2a2a;
+  padding: 0.5rem 2rem;
   text-align: center;
   color: rgba(255, 255, 255, 0.7);
-  margin-top: 3rem;
-}
-
-.footer-content {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.footer-links {
+  font-size: 0.75rem;
+  z-index: 100;
   display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
-.footer-links a {
-  color: #1976d2;
-  font-size: 0.9rem;
-  transition: color 0.2s ease;
+.blog-footer p {
+  margin: 0;
 }
 
-.footer-links a:hover {
-  color: #42a5f5;
-}
-
-.copyright {
-  font-size: 0.8rem;
+.blog-footer a {
   color: rgba(255, 255, 255, 0.5);
+}
+
+.blog-footer a:hover {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
 }
 
 /* Loading and error states */
@@ -406,7 +413,11 @@ a:hover {
   }
 
   .logo {
-    height: 80px;
+    height: 100px;
+  }
+
+  .header-spacer {
+    width: 100px;
   }
 
   .hero-name {
@@ -455,7 +466,11 @@ a:hover {
   }
 
   .logo {
-    height: 60px;
+    height: 75px;
+  }
+
+  .header-spacer {
+    width: 75px;
   }
 
   .post-title {

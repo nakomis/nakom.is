@@ -16,7 +16,7 @@ export default function BlogHome({ posts }: BlogHomeProps) {
             {posts.map(post => (
               <article key={post.slug} className="post-preview">
                 <h3>
-                  <a href={`/${post.slug}`}>{post.title}</a>
+                  <a href={`/${post.slug}`} className="post-card-link">{post.title}</a>
                 </h3>
                 <div className="post-meta">
                   <time dateTime={post.date}>
@@ -35,9 +35,6 @@ export default function BlogHome({ posts }: BlogHomeProps) {
                     </span>
                   ))}
                 </div>
-                <a href={`/${post.slug}`} className="read-more">
-                  Read more →
-                </a>
               </article>
             ))}
           </div>
