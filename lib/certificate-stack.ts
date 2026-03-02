@@ -10,7 +10,6 @@ export interface CertificateStackProps extends cdk.StackProps {
 
 export class CertificateStack extends cdk.Stack {
     readonly certificate: cm.Certificate;
-    readonly blogCertificate: cm.Certificate;
     
     constructor(scope: Construct, id: string, props: CertificateStackProps) {
         super(scope, id, props);
@@ -27,13 +26,6 @@ export class CertificateStack extends cdk.Stack {
             domainName: 'nakom.is',
             subjectAlternativeNames: ['nakomis.com', 'nakomis.co.uk', 'silverknoweseastway.com', 'silverknoweseastway.org'],
             validation: cm.CertificateValidation.fromDnsMultiZone(dnsMultiZone)
-        });
-
-        // Separate certificate for blog (completely independent)
-        const nakomIsZone = props.hostedZones.find(z => z.zoneName === 'nakom.is')!.zone;
-        this.blogCertificate = new cm.Certificate(this, "BlogCert", {
-            domainName: 'blog.nakom.is',
-            validation: cm.CertificateValidation.fromDns(nakomIsZone)
         });
     }
 };

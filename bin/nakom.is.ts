@@ -14,7 +14,6 @@ import { SESStack } from '../lib/ses-stack';
 import { ChatStack } from '../lib/chat-stack';
 import { CvStack } from '../lib/cv-stack';
 import { LinkedInStack } from '../lib/linkedin-stack';
-import { BlogStack } from '../lib/blog-stack';
 import { PostgresQueryStack } from '../lib/postgres-query-stack';
 
 const app = new cdk.App();
@@ -77,13 +76,6 @@ const cvStack = new CvStack(app, 'CvStack', {
 const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
     ...londonEnv,
     privateBucket: s3Stack.privateBucket,
-});
-const blogStack = new BlogStack(app, 'BlogStack', {
-    ...londonEnv,
-    domainName: 'blog.nakom.is',
-    hostedZone: r53Stack.nakomIsHostedZone,
-    certificate: certificateStack.blogCertificate,
-    crossRegionReferences: true
 });
 // VPC-enabled Lambda for PostgreSQL queries
 const postgresQueryStack = new PostgresQueryStack(app, 'PostgresQueryStack', londonEnv);
