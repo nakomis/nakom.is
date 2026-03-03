@@ -63,28 +63,36 @@ export async function readBlogPosts(): Promise<string> {
         return 'Error: BLOG_BUCKET environment variable not set';
     }
 
-    const listResult = await s3.send(new ListObjectsV2Command({
-        Bucket: blogBucket,
-        Prefix: 'posts/',
-    }));
+    try {
+        const listResult = await s3.send(new ListObjectsV2Command({
+            Bucket: blogBucket,
+            Prefix: 'posts/',
+        }));
 
-    const keys = (listResult.Contents ?? [])
-        .map(obj => obj.Key!)
-        .filter(key => key.endsWith('.md'));
+        if (listResult.IsTruncated) {
+            console.warn('Blog post listing was truncated at 1,000 keys — implement pagination if post count grows.');
+        }
 
-    if (keys.length === 0) {
-        return 'No blog posts found.';
+        const keys = (listResult.Contents ?? [])
+            .map(obj => obj.Key!)
+            .filter(key => key.endsWith('.md'));
+
+        if (keys.length === 0) {
+            return 'No blog posts found.';
+        }
+
+        const posts = await Promise.all(
+            keys.map(async key => {
+                const result = await s3.send(new GetObjectCommand({ Bucket: blogBucket, Key: key }));
+                const content = await streamToString(result.Body as Readable);
+                return `# ${key.replace('posts/', '')}\n\n${content}`;
+            })
+        );
+
+        const aggregated = posts.join('\n\n---\n\n');
+        cache.set(cacheKey, { content: aggregated, timestamp: now });
+        return aggregated;
+    } catch (err: any) {
+        return `Error reading blog posts: ${err.message ?? String(err)}`;
     }
-
-    const posts = await Promise.all(
-        keys.map(async key => {
-            const result = await s3.send(new GetObjectCommand({ Bucket: blogBucket, Key: key }));
-            const content = await streamToString(result.Body as Readable);
-            return `# ${key.replace('posts/', '')}\n\n${content}`;
-        })
-    );
-
-    const aggregated = posts.join('\n\n---\n\n');
-    cache.set(cacheKey, { content: aggregated, timestamp: now });
-    return aggregated;
 }
