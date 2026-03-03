@@ -10,6 +10,7 @@ const connections: Connection[] = [
   { sourceId: 'link-cv', color: '#ff8c00' },
   { sourceId: 'link-linkedin', color: '#0077b5' },
   { sourceId: 'link-github', color: '#f0f0f0' },
+  { sourceId: 'link-blog', color: '#38983f' },
 ];
 
 interface LineCoords {
