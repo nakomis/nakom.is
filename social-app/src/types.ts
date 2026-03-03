@@ -19,6 +19,7 @@ export const TOOL_TO_LINK: Record<string, string> = {
   'get_github_readme': 'link-github',
   'list_repo_files': 'link-github',
   'read_repo_file': 'link-github',
+  'get_blog_posts': 'link-blog',
 };
 
 export const TOOL_DESCRIPTIONS: Record<string, string> = {
@@ -28,4 +29,5 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   'get_github_readme': 'Reading GitHub README',
   'list_repo_files': 'Browsing repository',
   'read_repo_file': 'Reading file',
+  'get_blog_posts': 'Reading blog posts',
 };
