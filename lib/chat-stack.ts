@@ -53,6 +53,12 @@ export class ChatStack extends cdk.Stack {
 
         const secrets = loadSecrets();
 
+        // Blog bucket (separate CDK app — reference by name, no cross-stack dependency)
+        const blogBucket = s3.Bucket.fromBucketName(
+            this, 'BlogBucket',
+            `blog-nakom-is-${this.region}-${this.account}`
+        );
+
         // SSM Parameter for Anthropic API key
         const anthropicApiKeyParam = new ssm.StringParameter(this, 'AnthropicApiKey', {
             parameterName: '/nakom.is/anthropic-api-key',
@@ -105,6 +111,7 @@ export class ChatStack extends cdk.Stack {
                 MARTIN_EMAIL: secrets.martinEmail,
                 SES_FROM_EMAIL: props.sesFromAddress,
                 PRIVATE_BUCKET: props.privateBucket.bucketName,
+                BLOG_BUCKET: blogBucket.bucketName,
                 CV_CHAT_LOGS_TABLE: cvChatLogsTable.tableName,
             },
             bundling: {
@@ -139,6 +146,9 @@ export class ChatStack extends cdk.Stack {
         props.privateBucket.grantRead(this.chatFunction, 'linkedin.md');
         props.privateBucket.grantRead(this.chatFunction, 'interests.md');
 
+        // Grant read access to blog bucket for blog posts
+        blogBucket.grantRead(this.chatFunction, 'posts/*');
+
         // --- Streaming Chat Lambda (SSE via Function URL) ---
         const streamLogGroup = new LogGroup(this, 'StreamChatLambdaLogs', {
             logGroupName: '/nakom.is/lambda/chat-stream',
@@ -158,6 +168,7 @@ export class ChatStack extends cdk.Stack {
                 GITHUB_USER: 'nakomis',
                 RATE_LIMIT_TABLE: rateLimitTable.tableName,
                 PRIVATE_BUCKET: props.privateBucket.bucketName,
+                BLOG_BUCKET: blogBucket.bucketName,
                 CV_CHAT_LOGS_TABLE: cvChatLogsTable.tableName,
             },
             bundling: {
@@ -173,6 +184,7 @@ export class ChatStack extends cdk.Stack {
         props.privateBucket.grantRead(this.streamChatFunction, 'cv.md');
         props.privateBucket.grantRead(this.streamChatFunction, 'linkedin.md');
         props.privateBucket.grantRead(this.streamChatFunction, 'interests.md');
+        blogBucket.grantRead(this.streamChatFunction, 'posts/*');
 
         // Allow CloudFront (via OAC) to invoke the streaming function URL.
         // Both InvokeFunctionUrl AND InvokeFunction are required — without InvokeFunction,

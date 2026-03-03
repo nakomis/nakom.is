@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { readPrivateFile } from './s3-reader';
+import { readPrivateFile, readBlogPosts } from './s3-reader';
 import { fetchRepoReadme, listRepoFiles, readRepoFile } from './github';
 
 function githubUser(): string {
@@ -69,6 +69,15 @@ export const TOOLS = [
         repo_name: z.string().describe("The repository name"),
         path: z.string().describe("File path within the repo (e.g. 'lib/chat-stack.ts')"),
       }),
+    }
+  ),
+
+  tool(
+    async () => readBlogPosts(),
+    {
+      name: 'get_blog_posts',
+      description: "Read Martin's blog posts from blog.nakom.is. Use this when asked about his writing, technical articles, opinions, or specific blog posts.",
+      schema: z.object({}),
     }
   ),
 ];
