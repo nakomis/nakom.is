@@ -77,7 +77,7 @@ async function publishAiNotify(payload: object): Promise<void> {
     const client = await getIotClient();
     await client.send(new PublishCommand({
       topic: 'ai-notify/events',
-      payload: Buffer.from(JSON.stringify(payload)) as unknown as Uint8Array,
+      payload: Buffer.from(JSON.stringify(payload)),
       qos: 0,
     }));
   } catch (err) {
@@ -114,7 +114,7 @@ class SSECallbackHandler extends BaseCallbackHandler {
     this.runIdToToolName.set(runId, toolName);
     this.toolsCalledInRun.push(toolName);
     writeSSE(this.stream, 'tool_start', { tool: toolName });
-    await publishAiNotify({ event: 'tool_start', tool: toolName });
+    void publishAiNotify({ event: 'tool_start', tool: toolName });
   }
 
   async handleToolEnd(
@@ -124,7 +124,7 @@ class SSECallbackHandler extends BaseCallbackHandler {
     const toolName = this.runIdToToolName.get(runId) || 'unknown';
     this.runIdToToolName.delete(runId);
     writeSSE(this.stream, 'tool_end', { tool: toolName });
-    await publishAiNotify({ event: 'tool_end', tool: toolName });
+    void publishAiNotify({ event: 'tool_end', tool: toolName });
   }
 
   async handleLLMEnd(output: LLMResult): Promise<void> {
@@ -233,8 +233,8 @@ export const handler = awslambda.streamifyResponse(
         verbose: false,
       });
 
-      await publishAiNotify({ event: 'question', text: lastMsg.content });
-      await publishAiNotify({ event: 'ai_start' });
+      void publishAiNotify({ event: 'question', text: lastMsg.content });
+      void publishAiNotify({ event: 'ai_start' });
       console.log('Stream: Executing agent with input:', lastMsg.content.substring(0, 100) + '...');
       const result = await executor.invoke(
         { input: lastMsg.content, chat_history: chatHistory },
@@ -287,7 +287,7 @@ export const handler = awslambda.streamifyResponse(
       }
 
       writeSSE(responseStream, 'done', {});
-      await publishAiNotify({ event: 'done' });
+      void publishAiNotify({ event: 'done' });
     } catch (err) {
       console.error('Stream handler error:', err);
       writeSSE(responseStream, 'error', { error: 'Internal server error' });
