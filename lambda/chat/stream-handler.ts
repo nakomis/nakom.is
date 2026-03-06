@@ -11,6 +11,7 @@ import { fetchGitHubRepos } from './github';
 import { buildSystemPrompt } from './system-prompt';
 import { TOOLS } from './tools';
 import { buildLogEntry, writeLogEntry } from './chat-logger';
+import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 
 // Types for the awslambda global (available in Node.js 20 Lambda runtime with RESPONSE_STREAM)
 declare global {
@@ -59,6 +60,32 @@ async function getModel(): Promise<ChatAnthropic> {
   return cachedModel;
 }
 
+// --- AI Notify: publish MQTT events alongside SSE (fire-and-forget) ---
+let iotClient: IoTDataPlaneClient | null = null;
+
+async function getIotClient(): Promise<IoTDataPlaneClient> {
+  if (iotClient) return iotClient;
+  const result = await ssmClient.send(new GetParameterCommand({ Name: '/AiNotify/IotEndpoint' }));
+  const endpoint = result.Parameter?.Value;
+  if (!endpoint) throw new Error('/AiNotify/IotEndpoint not found in SSM');
+  iotClient = new IoTDataPlaneClient({ endpoint: `https://${endpoint}` });
+  return iotClient;
+}
+
+async function publishAiNotify(payload: object): Promise<void> {
+  try {
+    const client = await getIotClient();
+    await client.send(new PublishCommand({
+      topic: 'ai-notify/events',
+      payload: Buffer.from(JSON.stringify(payload)) as unknown as Uint8Array,
+      qos: 0,
+    }));
+  } catch (err) {
+    console.error('[ai-notify] publish failed (non-fatal):', err);
+    iotClient = null;  // reset so next invocation re-fetches endpoint
+  }
+}
+
 // --- SSE Callback Handler ---
 class SSECallbackHandler extends BaseCallbackHandler {
   name = 'SSECallbackHandler';
@@ -87,6 +114,7 @@ class SSECallbackHandler extends BaseCallbackHandler {
     this.runIdToToolName.set(runId, toolName);
     this.toolsCalledInRun.push(toolName);
     writeSSE(this.stream, 'tool_start', { tool: toolName });
+    await publishAiNotify({ event: 'tool_start', tool: toolName });
   }
 
   async handleToolEnd(
@@ -96,6 +124,7 @@ class SSECallbackHandler extends BaseCallbackHandler {
     const toolName = this.runIdToToolName.get(runId) || 'unknown';
     this.runIdToToolName.delete(runId);
     writeSSE(this.stream, 'tool_end', { tool: toolName });
+    await publishAiNotify({ event: 'tool_end', tool: toolName });
   }
 
   async handleLLMEnd(output: LLMResult): Promise<void> {
@@ -204,6 +233,8 @@ export const handler = awslambda.streamifyResponse(
         verbose: false,
       });
 
+      await publishAiNotify({ event: 'question', text: lastMsg.content });
+      await publishAiNotify({ event: 'ai_start' });
       console.log('Stream: Executing agent with input:', lastMsg.content.substring(0, 100) + '...');
       const result = await executor.invoke(
         { input: lastMsg.content, chat_history: chatHistory },
@@ -256,6 +287,7 @@ export const handler = awslambda.streamifyResponse(
       }
 
       writeSSE(responseStream, 'done', {});
+      await publishAiNotify({ event: 'done' });
     } catch (err) {
       console.error('Stream handler error:', err);
       writeSSE(responseStream, 'error', { error: 'Internal server error' });
