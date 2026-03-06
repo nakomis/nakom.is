@@ -186,6 +186,17 @@ export class ChatStack extends cdk.Stack {
         props.privateBucket.grantRead(this.streamChatFunction, 'interests.md');
         blogBucket.grantRead(this.streamChatFunction, 'posts/*');
 
+        // AI Notify: allow stream Lambda to publish MQTT events and read IoT endpoint from SSM.
+        // The IAM policy is created by the ai-notify CDK stack — deploy that stack first.
+        const aiNotifyPublishPolicyArn = ssm.StringParameter.valueForStringParameter(
+            this, '/AiNotify/IotPublishPolicyArn',
+        );
+        this.streamChatFunction.role?.addManagedPolicy(
+            iam.ManagedPolicy.fromManagedPolicyArn(
+                this, 'AiNotifyPublishPolicy', aiNotifyPublishPolicyArn,
+            ),
+        );
+
         // Allow CloudFront (via OAC) to invoke the streaming function URL.
         // Both InvokeFunctionUrl AND InvokeFunction are required — without InvokeFunction,
         // Lambda's "Block public access" feature rejects the OAC-signed request with 403.
