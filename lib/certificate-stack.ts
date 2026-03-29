@@ -10,7 +10,7 @@ export interface CertificateStackProps extends cdk.StackProps {
 
 export class CertificateStack extends cdk.Stack {
     readonly certificate: cm.Certificate;
-    
+
     constructor(scope: Construct, id: string, props: CertificateStackProps) {
         super(scope, id, props);
 
@@ -22,9 +22,13 @@ export class CertificateStack extends cdk.Stack {
             };
         }, initialValue);
 
+        // cv.nakomis.com is validated in the nakomis.com zone
+        const nakomisComZone = props.hostedZones.find(z => z.zoneName === 'nakomis.com')!.zone;
+        dnsMultiZone['cv.nakomis.com'] = nakomisComZone;
+
         this.certificate = new cm.Certificate(this, "NakomIsCert", {
             domainName: 'nakom.is',
-            subjectAlternativeNames: ['nakomis.com', 'nakomis.co.uk', 'silverknoweseastway.com', 'silverknoweseastway.org'],
+            subjectAlternativeNames: ['nakomis.com', 'nakomis.co.uk', 'cv.nakomis.com'],
             validation: cm.CertificateValidation.fromDnsMultiZone(dnsMultiZone)
         });
     }

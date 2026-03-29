@@ -60,7 +60,7 @@ const cloudfrontStack = new CloudfrontStack(app, 'CloudfrontStack', {
 const route53AdditionalStack = new Route53AdditionalStack(app, 'Route53AdditionalStack', {
     ...londonEnv,
     cloudfront: cloudfrontStack.distrubution,
-    hostedZones: r53Stack.hostedZones,
+    hostedZones: r53Stack.hostedZones.filter(z => !z.zoneName.includes('silverknowes')),
     crossRegionReferences: true
 });
 const iamSecretStack = new IAMSecretStack(app, 'IAMSecretStack', {

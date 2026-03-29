@@ -76,7 +76,7 @@ export const TOOLS = [
     async () => readBlogPosts(),
     {
       name: 'get_blog_posts',
-      description: "Read Martin's blog posts from blog.nakom.is. Use this when asked about his writing, technical articles, opinions, or specific blog posts.",
+      description: "Read Martin's blog posts from blog.nakomis.com. Use this when asked about his writing, technical articles, opinions, or specific blog posts.",
       schema: z.object({}),
     }
   ),
