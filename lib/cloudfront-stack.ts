@@ -3,6 +3,8 @@ import * as api from 'aws-cdk-lib/aws-apigateway';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as cm from 'aws-cdk-lib/aws-certificatemanager';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 
@@ -27,12 +29,15 @@ export class CloudfrontStack extends cdk.Stack {
         });
 
         // Redirect /social → / (canonical URL)
+        // Redirect nakom.is root (/) → cv.nakomis.com (CV/social app)
         // Note: / → /social mapping now handled by defaultRootObject
         const socialRedirectFunction = new cloudfront.Function(this, 'SocialRedirectFunction', {
             functionName: 'nakomis-social-redirect',
             code: cloudfront.FunctionCode.fromInline(`
 function handler(event) {
-    var uri = event.request.uri;
+    var request = event.request;
+    var uri = request.uri;
+    var host = request.headers.host.value;
     if (uri === '/social' || uri === '/social/') {
         return {
             statusCode: 301,
@@ -40,27 +45,34 @@ function handler(event) {
             headers: { location: { value: '/' } }
         };
     }
-    return event.request;
+    if (host === 'nakom.is' && uri === '/') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: { location: { value: 'https://cv.nakomis.com/' } }
+        };
+    }
+    return request;
 }
 `),
             runtime: cloudfront.FunctionRuntime.JS_2_0,
         });
 
-        // Redirect silverknoweseastway domains to nakom.is
-        const silverknowesRedirectFunction = new cloudfront.Function(this, 'SilverknowesRedirectFunction', {
-            functionName: 'nakomis-silverknowes-redirect',
+        // Redirect nakomis.com (and www) to the blog
+        const nakomisComRedirectFunction = new cloudfront.Function(this, 'NakomisComRedirectFunction', {
+            functionName: 'nakomis-nakomiscom-redirect',
             code: cloudfront.FunctionCode.fromInline(`
 function handler(event) {
     var request = event.request;
     var host = request.headers.host.value;
 
-    // Redirect silverknoweseastway domains to nakom.is
-    if (host === 'silverknoweseastway.com' || host === 'silverknoweseastway.org') {
+    // Redirect nakomis.com (and www) to the blog
+    if (host === 'nakomis.com' || host === 'www.nakomis.com') {
         return {
             statusCode: 301,
             statusDescription: 'Moved Permanently',
             headers: {
-                location: { value: 'https://nakom.is/' }
+                location: { value: 'https://blog.nakomis.com/' }
             }
         };
     }
@@ -133,14 +145,24 @@ function handler(event) {
                         eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
                     },
                     {
-                        function: silverknowesRedirectFunction,
+                        function: nakomisComRedirectFunction,
                         eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
                     }
                 ],
             },
             additionalBehaviors,
-            domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk', 'silverknoweseastway.com', 'silverknoweseastway.org'],
+            domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk', 'cv.nakomis.com'],
             certificate: props!.certificate,
+        });
+
+        // Route53 A record for cv.nakomis.com → this CloudFront distribution
+        const nakomisComZone = route53.HostedZone.fromLookup(this, 'NakomisComZone', {
+            domainName: 'nakomis.com',
+        });
+        new route53.ARecord(this, 'CvARecord', {
+            zone: nakomisComZone,
+            recordName: 'cv.nakomis.com',
+            target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(this.distrubution)),
         });
 
         // Attach OAC to the Lambda Function URL origin.
