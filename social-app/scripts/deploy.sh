@@ -57,7 +57,7 @@ git commit -m "Release social/$RELEASE_VERSION"
 git tag "social/$RELEASE_VERSION"
 
 # --- Deploy to S3 / CloudFront ---
-DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?contains(@, 'nakom.is')]].Id" --output text)
+DISTRIBUTION_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Aliases.Items[?@ == 'nakom.is']].Id" --output text)
 
 echo "Uploading index.html as social.html..."
 aws s3 cp "$APP_DIR/dist/index.html" "s3://${BUCKET}/social.html" --content-type "text/html" \
