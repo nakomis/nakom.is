@@ -77,7 +77,7 @@ h1 {
 }
 
 .social-link img {
-  width: 2.5em;
+  width: 60px;
   height: 2.5em;
   object-fit: contain;
   flex-shrink: 0;
