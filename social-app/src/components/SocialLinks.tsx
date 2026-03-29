@@ -1,4 +1,4 @@
-import blogLogo from '../assets/logo-flat.png';
+import blogLogo from '../assets/logo-shaded-transparent.png';
 
 type Link = {
   id: string;

@@ -76,6 +76,13 @@ h1 {
   text-align: center;
 }
 
+.social-link img {
+  width: 2.5em;
+  height: 2.5em;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .social-link span {
   font-size: 1.3em;
 }
