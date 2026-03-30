@@ -141,13 +141,21 @@ export class ChatStack extends cdk.Stack {
             ],
         }));
 
-        // Grant read access to private bucket for CV, LinkedIn, and interests
+        // Grant read access to private bucket for CV, LinkedIn, interests, and blog embeddings
         props.privateBucket.grantRead(this.chatFunction, 'cv.md');
         props.privateBucket.grantRead(this.chatFunction, 'linkedin.md');
         props.privateBucket.grantRead(this.chatFunction, 'interests.md');
+        props.privateBucket.grantRead(this.chatFunction, 'blog-embeddings.json');
 
         // Grant read access to blog bucket for blog posts
         blogBucket.grantRead(this.chatFunction, 'posts/*');
+
+        // Grant Bedrock InvokeModel for Titan Embed (query-time embedding)
+        this.chatFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['bedrock:InvokeModel'],
+            resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0'],
+        }));
 
         // --- Streaming Chat Lambda (SSE via Function URL) ---
         const streamLogGroup = new LogGroup(this, 'StreamChatLambdaLogs', {
@@ -184,7 +192,14 @@ export class ChatStack extends cdk.Stack {
         props.privateBucket.grantRead(this.streamChatFunction, 'cv.md');
         props.privateBucket.grantRead(this.streamChatFunction, 'linkedin.md');
         props.privateBucket.grantRead(this.streamChatFunction, 'interests.md');
+        props.privateBucket.grantRead(this.streamChatFunction, 'blog-embeddings.json');
         blogBucket.grantRead(this.streamChatFunction, 'posts/*');
+
+        this.streamChatFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['bedrock:InvokeModel'],
+            resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0'],
+        }));
 
         // AI Notify: allow stream Lambda to publish MQTT events and read IoT endpoint from SSM.
         // The IAM policy is created by the ai-notify CDK stack — deploy that stack first.
