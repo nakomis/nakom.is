@@ -91,19 +91,27 @@ export async function searchBlogJson(query: string): Promise<BlogSearchResult[]>
         embedQuery(query),
     ]);
 
-    return chunks
+    const scored = chunks
         .map(chunk => ({ chunk, score: cosineSimilarity(queryEmbedding, chunk.embedding) }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, TOP_K)
-        .map(({ chunk }) => ({
-            id: chunk.id,
-            postSlug: chunk.post_slug,
-            postTitle: chunk.post_title,
-            postDate: chunk.post_date,
-            postUrl: chunk.post_url,
-            heading: chunk.heading,
-            excerpt: chunk.text,
-        }));
+        .sort((a, b) => b.score - a.score);
+
+    // Keep only the best-scoring chunk per post, then take top K
+    const seen = new Set<string>();
+    const deduplicated = scored.filter(({ chunk }) => {
+        if (seen.has(chunk.post_slug)) return false;
+        seen.add(chunk.post_slug);
+        return true;
+    }).slice(0, TOP_K);
+
+    return deduplicated.map(({ chunk }) => ({
+        id: chunk.id,
+        postSlug: chunk.post_slug,
+        postTitle: chunk.post_title,
+        postDate: chunk.post_date,
+        postUrl: chunk.post_url,
+        heading: chunk.heading,
+        excerpt: chunk.text,
+    }));
 }
 
 /**
