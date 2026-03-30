@@ -399,11 +399,11 @@ export class ApiGatewayStack extends cdk.Stack {
         });
         this.addAny405(searchResource);
 
-        // Separate usage plan and API key for blog search — 20 requests/day global quota
+        // Separate usage plan and API key for blog search — 50 requests/day global quota
         const blogSearchUsagePlan = this.gateway.addUsagePlan('BlogSearchUsagePlan', {
             name: 'BlogSearchUsagePlan',
             throttle: { rateLimit: 1, burstLimit: 2 },
-            quota: { limit: 20, period: api.Period.DAY },
+            quota: { limit: 50, period: api.Period.DAY },
         });
         blogSearchUsagePlan.addApiStage({ stage: this.gateway.deploymentStage });
 
