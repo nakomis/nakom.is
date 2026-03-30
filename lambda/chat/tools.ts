@@ -1,7 +1,8 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { readPrivateFile, readBlogPosts } from './s3-reader';
+import { readPrivateFile } from './s3-reader';
 import { fetchRepoReadme, listRepoFiles, readRepoFile } from './github';
+import { searchBlog } from './blog-retriever';
 
 function githubUser(): string {
   return process.env.GITHUB_USER || 'nakomis';
@@ -73,11 +74,13 @@ export const TOOLS = [
   ),
 
   tool(
-    async () => readBlogPosts(),
+    async ({ query }: { query: string }) => searchBlog(query),
     {
-      name: 'get_blog_posts',
-      description: "Read Martin's blog posts from blog.nakomis.com. Use this when asked about his writing, technical articles, opinions, or specific blog posts.",
-      schema: z.object({}),
+      name: 'search_blog',
+      description: "Search Martin's blog posts at blog.nakomis.com using semantic search. Use this when asked about his writing, technical articles, or any specific topic he may have blogged about. Pass the visitor's question or topic as the query.",
+      schema: z.object({
+        query: z.string().describe("The topic or question to search for in the blog posts"),
+      }),
     }
   ),
 ];

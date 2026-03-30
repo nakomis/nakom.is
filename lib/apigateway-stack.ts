@@ -15,6 +15,7 @@ export interface ApiGatewayStackProps extends cdk.StackProps {
     bucket: s3.Bucket,
     executionRole: iam.Role,
     chatFunction?: IFunction,
+    blogSearchFunction?: IFunction,
 }
 
 export class ApiGatewayStack extends cdk.Stack {
@@ -23,6 +24,7 @@ export class ApiGatewayStack extends cdk.Stack {
     readonly executionRole: iam.Role;
     readonly bucket: s3.Bucket;
     readonly apiKeyString: string;
+    readonly blogSearchApiKeyString: string;
 
     constructor(scope: Construct, id: string, props?: ApiGatewayStackProps) {
         super(scope, id, props);
@@ -110,6 +112,9 @@ export class ApiGatewayStack extends cdk.Stack {
         this.addStatic();
         if (props?.chatFunction) {
             this.addChat(props.chatFunction);
+        }
+        if (props?.blogSearchFunction) {
+            this.blogSearchApiKeyString = this.addBlogSearch(props.blogSearchFunction);
         }
         this.addLambda(props!.urlShortener);
         this.addExceptions();
@@ -377,6 +382,53 @@ export class ApiGatewayStack extends cdk.Stack {
         });
 
         this.addAny405(chatResource);
+    }
+
+    addBlogSearch(blogSearchFunction: IFunction): string {
+        const apiResource = this.gateway.root.addResource('api');
+        const searchResource = apiResource.addResource('search');
+
+        const integration = new api.LambdaIntegration(blogSearchFunction, { proxy: true });
+
+        searchResource.addMethod('POST', integration, {
+            apiKeyRequired: true,
+            methodResponses: [
+                { statusCode: '200' },
+                { statusCode: '429' },
+            ],
+        });
+        this.addAny405(searchResource);
+
+        // Separate usage plan and API key for blog search — 50 requests/day global quota
+        const blogSearchUsagePlan = this.gateway.addUsagePlan('BlogSearchUsagePlan', {
+            name: 'BlogSearchUsagePlan',
+            throttle: { rateLimit: 1, burstLimit: 2 },
+            quota: { limit: 50, period: api.Period.DAY },
+        });
+        blogSearchUsagePlan.addApiStage({ stage: this.gateway.deploymentStage });
+
+        const blogSearchApiKey = this.gateway.addApiKey('BlogSearchApiKey', {
+            apiKeyName: 'cfn-blog-search-key-v2',
+        });
+        blogSearchUsagePlan.addApiKey(blogSearchApiKey);
+
+        const blogSearchApiKeyValue = new GetApiKeyCr(this, 'BlogSearchApiKeyGetter', {
+            apiKey: blogSearchApiKey,
+        }).apikeyValue;
+
+        // Store in SSM so the blog-app CDK can read it at synth time
+        new ssm.StringParameter(this, 'BlogSearchApiKeyParam', {
+            parameterName: '/nakom.is/blog-search-api-key',
+            description: 'API key for blog search endpoint (injected by blog CloudFront)',
+            stringValue: blogSearchApiKeyValue,
+        });
+        new ssm.StringParameter(this, 'BlogSearchApiDomainParam', {
+            parameterName: '/nakom.is/blog-search-api-domain',
+            description: 'API Gateway domain for blog search (for blog CloudFront origin)',
+            stringValue: cdk.Fn.select(2, cdk.Fn.split('/', this.gateway.url)),
+        });
+
+        return blogSearchApiKeyValue;
     }
 
     addAny405(resource: cdk.aws_apigateway.IResource) {
