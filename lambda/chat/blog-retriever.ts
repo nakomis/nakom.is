@@ -5,9 +5,10 @@ import { Readable } from 'stream';
 const s3      = new S3Client({});
 const bedrock = new BedrockRuntimeClient({ region: 'us-east-1' });
 
-const EMBED_MODEL  = 'amazon.titan-embed-text-v2:0';
-const EMBED_DIMS   = 1024;
-const TOP_K        = 4;
+const EMBED_MODEL    = 'amazon.titan-embed-text-v2:0';
+const EMBED_DIMS     = 1024;
+const TOP_K          = 4;
+const MIN_SCORE      = 0.5;   // cosine similarity threshold — drop weak matches
 const EMBEDDINGS_KEY = 'blog-embeddings.json';
 
 interface BlogChunk {
@@ -93,7 +94,8 @@ export async function searchBlogJson(query: string): Promise<BlogSearchResult[]>
 
     const scored = chunks
         .map(chunk => ({ chunk, score: cosineSimilarity(queryEmbedding, chunk.embedding) }))
-        .sort((a, b) => b.score - a.score);
+        .sort((a, b) => b.score - a.score)
+        .filter(({ score }) => score >= MIN_SCORE);
 
     // Keep only the best-scoring chunk per post, then take top K
     const seen = new Set<string>();
@@ -127,6 +129,7 @@ export async function searchBlog(query: string): Promise<string> {
     const scored = chunks
         .map(chunk => ({ chunk, score: cosineSimilarity(queryEmbedding, chunk.embedding) }))
         .sort((a, b) => b.score - a.score)
+        .filter(({ score }) => score >= MIN_SCORE)
         .slice(0, TOP_K);
 
     if (scored.length === 0) return 'No relevant blog content found.';
