@@ -14,6 +14,8 @@ Senior software engineer and consultant with over 25 years of experience in full
 
 ## Skills
 
+**AI & Machine Learning:** Anthropic Claude API (tool use, streaming, agentic workflows), Claude Code, Spring AI (ChatClient, vector store), OpenAI API, AWS Bedrock, Google Gemini, LangChain4j, AWS SageMaker (custom training pipelines & serverless inference), TensorFlow / MobileNet (fine-tuning), RAG, prompt engineering
+
 **Cloud & Infrastructure:** AWS (CDK, Lambda, CloudFront, API Gateway, S3, DynamoDB, SES, Route53, ACM, EC2, ECS, EKS, Fargate & more), Google Cloud, Microsoft Azure, Terraform, CloudFormation, Kubernetes
 
 **Languages:** TypeScript / JavaScript, Java, Kotlin, Python, Go, Bash
