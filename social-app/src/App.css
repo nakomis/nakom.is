@@ -240,6 +240,23 @@ h1 {
   line-height: 1.5;
 }
 
+.chat-message.assistant a {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.chat-message.assistant a:hover {
+  color: #93c5fd;
+}
+
+.chat-message.assistant p {
+  margin: 0 0 8px 0;
+}
+
+.chat-message.assistant p:last-child {
+  margin-bottom: 0;
+}
+
 .chat-message.error {
   align-self: center;
   background-color: #7f1d1d;
