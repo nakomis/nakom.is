@@ -43,6 +43,7 @@ const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
     bucket: s3Stack.s3bucket(),
     executionRole: s3Stack.executionRole(),
     chatFunction: chatStack.chatFunction,
+    blogSearchFunction: chatStack.blogSearchFunction,
 });
 const certificateStack = new CertificateStack(app, 'CertificateStack', {
     ...nvirginiaEnv,

@@ -47,6 +47,7 @@ export class ChatStack extends cdk.Stack {
     readonly chatFunction: NodejsFunction;
     readonly streamChatFunction: NodejsFunction;
     readonly streamFunctionUrl: lambda.FunctionUrl;
+    readonly blogSearchFunction: NodejsFunction;
 
     constructor(scope: Construct, id: string, props: ChatStackProps) {
         super(scope, id, props);
@@ -244,7 +245,7 @@ export class ChatStack extends cdk.Stack {
             retention: RetentionDays.SIX_MONTHS,
         });
 
-        const blogSearchFunction = new NodejsFunction(this, 'BlogSearchFunction', {
+        this.blogSearchFunction = new NodejsFunction(this, 'BlogSearchFunction', {
             functionName: 'nakomis-blog-search',
             entry: 'lambda/blog-search/handler.ts',
             handler: 'handler',
@@ -258,8 +259,8 @@ export class ChatStack extends cdk.Stack {
             bundling: { minify: true, sourceMap: true },
         });
 
-        props.privateBucket.grantRead(blogSearchFunction, 'blog-embeddings.json');
-        blogSearchFunction.addToRolePolicy(new iam.PolicyStatement({
+        props.privateBucket.grantRead(this.blogSearchFunction, 'blog-embeddings.json');
+        this.blogSearchFunction.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['bedrock:InvokeModel'],
             resources: [
@@ -269,22 +270,5 @@ export class ChatStack extends cdk.Stack {
                 `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0`,
             ],
         }));
-
-        const blogSearchFunctionUrl = blogSearchFunction.addFunctionUrl({
-            authType: lambda.FunctionUrlAuthType.NONE,
-            cors: {
-                allowedOrigins: ['https://blog.nakomis.com', 'https://blog.nakom.is'],
-                allowedMethods: [lambda.HttpMethod.POST],
-                allowedHeaders: ['content-type'],
-            },
-            invokeMode: lambda.InvokeMode.BUFFERED,
-        });
-
-        // Store domain in SSM so blog-app infra can read it at synth time
-        new ssm.StringParameter(this, 'BlogSearchUrlDomainParam', {
-            parameterName: '/nakom.is/blog-search-url-domain',
-            description: 'Domain of the blog search Lambda Function URL (for blog CloudFront origin)',
-            stringValue: cdk.Fn.select(2, cdk.Fn.split('/', blogSearchFunctionUrl.url)),
-        });
     }
 }

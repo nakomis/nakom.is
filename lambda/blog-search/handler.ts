@@ -24,7 +24,11 @@ export const handler = async (event: any) => {
 
     let query: string;
     try {
-        const body = JSON.parse(event.body || '{}');
+        // API Gateway with binaryMediaTypes: ["*/*"] base64-encodes the body
+        const rawBody = event.isBase64Encoded
+            ? Buffer.from(event.body || '', 'base64').toString('utf-8')
+            : (event.body || '{}');
+        const body = JSON.parse(rawBody);
         query = (body.query ?? '').trim();
     } catch {
         return {
