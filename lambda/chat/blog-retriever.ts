@@ -17,6 +17,7 @@ interface BlogChunk {
     post_title: string;
     post_date:  string;
     post_url:   string;
+    post_tags:  string[];
     heading:    string;
     text:       string;
     embedding:  number[];
@@ -80,6 +81,15 @@ export interface BlogSearchResult {
     postUrl: string;
     heading: string;
     excerpt: string;
+}
+
+/**
+ * Return the unique set of tags across all published posts.
+ * Used by HyDE to ground the hypothetical passage in the blog's vocabulary.
+ */
+export async function getPostTags(): Promise<string[]> {
+    const chunks = await loadChunks();
+    return [...new Set(chunks.flatMap(c => c.post_tags ?? []))].sort();
 }
 
 /**

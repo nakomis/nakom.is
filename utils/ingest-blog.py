@@ -174,6 +174,7 @@ def main():
         title    = fm.get("title", slug)
         post_date = fm.get("date", "")
         post_url = fm.get("canonical", "")
+        tags     = re.findall(r'"([^"]+)"', fm.get("tags", ""))
 
         chunks = chunk_body(body)
         print(f"   {len(chunks)} chunk(s)")
@@ -191,6 +192,7 @@ def main():
                 "post_title":  title,
                 "post_date":   post_date,
                 "post_url":    post_url,
+                "post_tags":   tags,
                 "heading":     heading,
                 "text":        para_text,
                 "embedding":   vector,

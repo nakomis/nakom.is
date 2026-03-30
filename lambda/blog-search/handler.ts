@@ -1,4 +1,4 @@
-import { searchBlogJson } from '../chat/blog-retriever';
+import { searchBlogJson, getPostTags } from '../chat/blog-retriever';
 import { hydeExpand } from './hyde';
 
 const CORS_HEADERS = {
@@ -46,7 +46,8 @@ export const handler = async (event: any) => {
         };
     }
 
-    const hypothetical = await hydeExpand(query);
+    const tags = await getPostTags();
+    const hypothetical = await hydeExpand(query, tags);
     const results = await searchBlogJson(hypothetical);
     return {
         statusCode: 200,
