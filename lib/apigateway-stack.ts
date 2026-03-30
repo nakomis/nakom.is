@@ -408,7 +408,7 @@ export class ApiGatewayStack extends cdk.Stack {
         blogSearchUsagePlan.addApiStage({ stage: this.gateway.deploymentStage });
 
         const blogSearchApiKey = this.gateway.addApiKey('BlogSearchApiKey', {
-            apiKeyName: 'cfn-blog-search-key',
+            apiKeyName: 'cfn-blog-search-key-v2',
         });
         blogSearchUsagePlan.addApiKey(blogSearchApiKey);
 
