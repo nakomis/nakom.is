@@ -151,6 +151,7 @@ export async function searchBlog(query: string): Promise<string> {
 
     return scored.map(({ chunk }) => {
         const heading = chunk.heading ? ` — ${chunk.heading}` : '';
-        return `**${chunk.post_title}${heading}** (${chunk.post_date})\n${chunk.text}\n${chunk.post_url}`;
+        const link = `<a href="${chunk.post_url}">${chunk.post_title}${heading}</a>`;
+        return `POST_LINK: ${link}\nDATE: ${chunk.post_date}\nEXCERPT: ${chunk.text}`;
     }).join('\n\n---\n\n');
 }
