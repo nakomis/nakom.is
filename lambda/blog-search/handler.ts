@@ -1,4 +1,5 @@
 import { searchBlogJson } from '../chat/blog-retriever';
+import { hydeExpand } from './hyde';
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -41,7 +42,8 @@ export const handler = async (event: any) => {
         };
     }
 
-    const results = await searchBlogJson(query);
+    const hypothetical = await hydeExpand(query);
+    const results = await searchBlogJson(hypothetical);
     return {
         statusCode: 200,
         headers: CORS_HEADERS,

@@ -262,7 +262,12 @@ export class ChatStack extends cdk.Stack {
         blogSearchFunction.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['bedrock:InvokeModel'],
-            resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0'],
+            resources: [
+                'arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0',
+                // Cross-region inference profile for Haiku can route to any US region
+                'arn:aws:bedrock:*::foundation-model/anthropic.claude-3-5-haiku-20241022-v1:0',
+                `arn:aws:bedrock:us-east-1:${this.account}:inference-profile/us.anthropic.claude-3-5-haiku-20241022-v1:0`,
+            ],
         }));
 
         const blogSearchFunctionUrl = blogSearchFunction.addFunctionUrl({
