@@ -8,7 +8,7 @@ const bedrock = new BedrockRuntimeClient({ region: 'us-east-1' });
 const EMBED_MODEL    = 'amazon.titan-embed-text-v2:0';
 const EMBED_DIMS     = 1024;
 const TOP_K          = 4;
-const MIN_SCORE      = 0.5;   // cosine similarity threshold — drop weak matches
+const MIN_SCORE      = 0.3;   // cosine similarity threshold — drop weak matches
 const EMBEDDINGS_KEY = 'blog-embeddings.json';
 
 interface BlogChunk {
@@ -94,12 +94,17 @@ export async function searchBlogJson(query: string): Promise<BlogSearchResult[]>
 
     const scored = chunks
         .map(chunk => ({ chunk, score: cosineSimilarity(queryEmbedding, chunk.embedding) }))
-        .sort((a, b) => b.score - a.score)
-        .filter(({ score }) => score >= MIN_SCORE);
+        .sort((a, b) => b.score - a.score);
+
+    console.log('Search scores (top 5):', scored.slice(0, 5).map(
+        ({ chunk, score }) => `${score.toFixed(4)} ${chunk.post_slug}:${chunk.heading || chunk.id}`
+    ).join(' | '));
+
+    const filtered = scored.filter(({ score }) => score >= MIN_SCORE);
 
     // Keep only the best-scoring chunk per post, then take top K
     const seen = new Set<string>();
-    const deduplicated = scored.filter(({ chunk }) => {
+    const deduplicated = filtered.filter(({ chunk }) => {
         if (seen.has(chunk.post_slug)) return false;
         seen.add(chunk.post_slug);
         return true;
