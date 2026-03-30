@@ -28,9 +28,11 @@ export class CloudfrontStack extends cdk.Stack {
             }
         });
 
-        // Redirect /social → / (canonical URL)
-        // Redirect nakom.is root (/) → cv.nakomis.com (CV/social app)
-        // Note: / → /social mapping now handled by defaultRootObject
+        // Single viewer-request function handling all redirects:
+        // - nakomis.com / www.nakomis.com → blog.nakomis.com (preserving path, e.g. /ads.txt)
+        // - /social or /social/ → / (canonical URL)
+        // - nakom.is / → cv.nakomis.com
+        // CloudFront only permits one function per event type per behaviour, so all logic lives here.
         const socialRedirectFunction = new cloudfront.Function(this, 'SocialRedirectFunction', {
             functionName: 'nakomis-social-redirect',
             code: cloudfront.FunctionCode.fromInline(`
@@ -38,6 +40,13 @@ function handler(event) {
     var request = event.request;
     var uri = request.uri;
     var host = request.headers.host.value;
+    if (host === 'nakomis.com' || host === 'www.nakomis.com') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: { location: { value: 'https://blog.nakomis.com' + uri } }
+        };
+    }
     if (uri === '/social' || uri === '/social/') {
         return {
             statusCode: 301,
@@ -52,32 +61,6 @@ function handler(event) {
             headers: { location: { value: 'https://cv.nakomis.com/' } }
         };
     }
-    return request;
-}
-`),
-            runtime: cloudfront.FunctionRuntime.JS_2_0,
-        });
-
-        // Redirect nakomis.com (and www) to the blog
-        const nakomisComRedirectFunction = new cloudfront.Function(this, 'NakomisComRedirectFunction', {
-            functionName: 'nakomis-nakomiscom-redirect',
-            code: cloudfront.FunctionCode.fromInline(`
-function handler(event) {
-    var request = event.request;
-    var host = request.headers.host.value;
-
-    // Redirect nakomis.com (and www) to the blog
-    if (host === 'nakomis.com' || host === 'www.nakomis.com') {
-        return {
-            statusCode: 301,
-            statusDescription: 'Moved Permanently',
-            headers: {
-                location: { value: 'https://blog.nakomis.com/' }
-            }
-        };
-    }
-
-    // Continue normal processing for other domains
     return request;
 }
 `),
@@ -144,10 +127,6 @@ function handler(event) {
                         function: socialRedirectFunction,
                         eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
                     },
-                    {
-                        function: nakomisComRedirectFunction,
-                        eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-                    }
                 ],
             },
             additionalBehaviors,

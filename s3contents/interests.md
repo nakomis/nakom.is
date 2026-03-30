@@ -15,7 +15,10 @@ Martin has several cats:
 
 ## Other Interests
 
-- [Add your other interests here — music, sport, travel, etc.]
+- I love to build, whether it's 3D printed (parametric CAD in onshape), microcontroller based, cloud app, or any combination of the above, I love it
+- For when I like to relax, movies are my thing. Mostly Sci-Fi (obviously) and I have a huge library of movies on Prime Video to while away the evenings
+- I also love to read, again very heavy on the sci-fi & fantasy, but I like to throw in some
+non-fiction now and again
 
 ---
 
