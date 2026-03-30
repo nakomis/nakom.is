@@ -71,6 +71,41 @@ function cosineSimilarity(a: number[], b: number[]): number {
     return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
+export interface BlogSearchResult {
+    id: string;
+    postSlug: string;
+    postTitle: string;
+    postDate: string;
+    postUrl: string;
+    heading: string;
+    excerpt: string;
+}
+
+/**
+ * Search blog posts by semantic similarity to the query.
+ * Returns structured JSON results for use by the search API.
+ */
+export async function searchBlogJson(query: string): Promise<BlogSearchResult[]> {
+    const [chunks, queryEmbedding] = await Promise.all([
+        loadChunks(),
+        embedQuery(query),
+    ]);
+
+    return chunks
+        .map(chunk => ({ chunk, score: cosineSimilarity(queryEmbedding, chunk.embedding) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, TOP_K)
+        .map(({ chunk }) => ({
+            id: chunk.id,
+            postSlug: chunk.post_slug,
+            postTitle: chunk.post_title,
+            postDate: chunk.post_date,
+            postUrl: chunk.post_url,
+            heading: chunk.heading,
+            excerpt: chunk.text,
+        }));
+}
+
 /**
  * Search blog posts by semantic similarity to the query.
  * Returns a formatted string of the top-K matching chunks, ready to inject into context.

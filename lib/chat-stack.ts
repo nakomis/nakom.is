@@ -236,5 +236,50 @@ export class ChatStack extends cdk.Stack {
             description: 'Domain of the streaming Lambda Function URL (for CloudFront origin)',
             stringValue: cdk.Fn.select(2, cdk.Fn.split('/', this.streamFunctionUrl.url)),
         });
+
+        // --- Blog Search Lambda ---
+        // Exposes searchBlogJson() as a public HTTP endpoint for the blog site.
+        const blogSearchLogGroup = new LogGroup(this, 'BlogSearchLambdaLogs', {
+            logGroupName: '/nakom.is/lambda/blog-search',
+            retention: RetentionDays.SIX_MONTHS,
+        });
+
+        const blogSearchFunction = new NodejsFunction(this, 'BlogSearchFunction', {
+            functionName: 'nakomis-blog-search',
+            entry: 'lambda/blog-search/handler.ts',
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_20_X,
+            memorySize: 256,
+            timeout: Duration.seconds(30),
+            logGroup: blogSearchLogGroup,
+            environment: {
+                PRIVATE_BUCKET: props.privateBucket.bucketName,
+            },
+            bundling: { minify: true, sourceMap: true },
+        });
+
+        props.privateBucket.grantRead(blogSearchFunction, 'blog-embeddings.json');
+        blogSearchFunction.addToRolePolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ['bedrock:InvokeModel'],
+            resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0'],
+        }));
+
+        const blogSearchFunctionUrl = blogSearchFunction.addFunctionUrl({
+            authType: lambda.FunctionUrlAuthType.NONE,
+            cors: {
+                allowedOrigins: ['https://blog.nakomis.com', 'https://blog.nakom.is'],
+                allowedMethods: [lambda.HttpMethod.POST],
+                allowedHeaders: ['content-type'],
+            },
+            invokeMode: lambda.InvokeMode.BUFFERED,
+        });
+
+        // Store domain in SSM so blog-app infra can read it at synth time
+        new ssm.StringParameter(this, 'BlogSearchUrlDomainParam', {
+            parameterName: '/nakom.is/blog-search-url-domain',
+            description: 'Domain of the blog search Lambda Function URL (for blog CloudFront origin)',
+            stringValue: cdk.Fn.select(2, cdk.Fn.split('/', blogSearchFunctionUrl.url)),
+        });
     }
 }
