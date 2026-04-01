@@ -35,6 +35,16 @@ See plan file for full architecture. Key points:
 ## Secrets
 `secrets.json` (gitignored) holds the Anthropic API key and Martin's contact email. Copy from `secrets.json.template` to get started.
 
+## Blog RAG search
+
+The chat assistant and blog search UI use semantic search over blog posts.
+
+- **`blog-embeddings.json`** in `nakom.is-private` S3 — compact file loaded at cold start. Contains chunk IDs, base64-encoded Float32 embeddings, post slugs, and tags. Regenerate by running `ingest-blog.py` in the `blog-app` repo.
+- **`blog-chunks` DynamoDB table** — chunk text and metadata (title, URL, heading, excerpt), keyed on chunk ID (e.g. `my-post:3`). Written by the same ingest script.
+- **`lambda/chat/blog-retriever.ts`** — loads the S3 file at cold start, runs in-memory cosine similarity, then fetches text from DynamoDB via `BatchGetItem`. Used by all three Lambdas: `nakomis-chat`, `nakomis-chat-stream`, `nakomis-blog-search`.
+
+Required env vars on all three Lambdas: `PRIVATE_BUCKET`, `BLOG_CHUNKS_TABLE`.
+
 ## React SPA
 - Built with Vite, served from S3 via `/static/social-app/` path
 - Deploy: `cd social-app && npm run build && bash scripts/deploy.sh`

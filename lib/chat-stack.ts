@@ -67,6 +67,13 @@ export class ChatStack extends cdk.Stack {
             stringValue: secrets.anthropicApiKey,
         });
 
+        // DynamoDB Table for blog chunk metadata (text fetched after cosine search)
+        const blogChunksTable = new dynamodb.TableV2(this, 'BlogChunks', {
+            tableName:    'blog-chunks',
+            partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+            billing:      dynamodb.Billing.onDemand(),
+        });
+
         // DynamoDB Table for rate limiting
         const rateLimitTable = new dynamodb.TableV2(this, 'ChatRateLimits', {
             tableName: 'chat-rate-limits',
@@ -114,6 +121,7 @@ export class ChatStack extends cdk.Stack {
                 PRIVATE_BUCKET: props.privateBucket.bucketName,
                 BLOG_BUCKET: blogBucket.bucketName,
                 CV_CHAT_LOGS_TABLE: cvChatLogsTable.tableName,
+                BLOG_CHUNKS_TABLE: blogChunksTable.tableName,
             },
             bundling: {
                 minify: true,
@@ -124,6 +132,7 @@ export class ChatStack extends cdk.Stack {
         // Grant DynamoDB access
         rateLimitTable.grant(this.chatFunction, 'dynamodb:UpdateItem');
         cvChatLogsTable.grant(this.chatFunction, 'dynamodb:PutItem');
+        blogChunksTable.grant(this.chatFunction, 'dynamodb:GetItem', 'dynamodb:BatchGetItem');
 
         // Grant SSM read access for the Anthropic API key
         anthropicApiKeyParam.grantRead(this.chatFunction);
@@ -179,6 +188,7 @@ export class ChatStack extends cdk.Stack {
                 PRIVATE_BUCKET: props.privateBucket.bucketName,
                 BLOG_BUCKET: blogBucket.bucketName,
                 CV_CHAT_LOGS_TABLE: cvChatLogsTable.tableName,
+                BLOG_CHUNKS_TABLE: blogChunksTable.tableName,
             },
             bundling: {
                 minify: true,
@@ -188,6 +198,7 @@ export class ChatStack extends cdk.Stack {
 
         rateLimitTable.grant(this.streamChatFunction, 'dynamodb:UpdateItem');
         cvChatLogsTable.grant(this.streamChatFunction, 'dynamodb:PutItem');
+        blogChunksTable.grant(this.streamChatFunction, 'dynamodb:GetItem', 'dynamodb:BatchGetItem');
 
         anthropicApiKeyParam.grantRead(this.streamChatFunction);
         props.privateBucket.grantRead(this.streamChatFunction, 'cv.md');
@@ -254,12 +265,14 @@ export class ChatStack extends cdk.Stack {
             timeout: Duration.seconds(30),
             logGroup: blogSearchLogGroup,
             environment: {
-                PRIVATE_BUCKET: props.privateBucket.bucketName,
+                PRIVATE_BUCKET:     props.privateBucket.bucketName,
+                BLOG_CHUNKS_TABLE:  blogChunksTable.tableName,
             },
             bundling: { minify: true, sourceMap: true },
         });
 
         props.privateBucket.grantRead(this.blogSearchFunction, 'blog-embeddings.json');
+        blogChunksTable.grant(this.blogSearchFunction, 'dynamodb:GetItem', 'dynamodb:BatchGetItem');
         this.blogSearchFunction.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['bedrock:InvokeModel'],
