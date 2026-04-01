@@ -47,6 +47,28 @@ export async function readPrivateFile(key: string): Promise<string> {
 }
 
 /**
+ * Read a single blog post by slug from the blog S3 bucket.
+ * Returns the raw markdown, or an error string if not found.
+ */
+export async function readBlogPost(slug: string): Promise<string> {
+    const blogBucket = process.env.BLOG_BUCKET;
+    if (!blogBucket) {
+        return 'Error: BLOG_BUCKET environment variable not set';
+    }
+
+    const key = `posts/${slug}.md`;
+    try {
+        const result = await s3.send(new GetObjectCommand({ Bucket: blogBucket, Key: key }));
+        return await streamToString(result.Body as Readable);
+    } catch (err: any) {
+        if (err.name === 'NoSuchKey') {
+            return `Post "${slug}" not found. Check the slug is correct.`;
+        }
+        throw err;
+    }
+}
+
+/**
  * Read all blog posts from the blog S3 bucket (posts/ prefix), with a 1-hour module-level cache.
  * Returns all posts concatenated as markdown, separated by horizontal rules.
  */
