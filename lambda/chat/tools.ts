@@ -2,7 +2,8 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { readPrivateFile } from './s3-reader';
 import { fetchRepoReadme, listRepoFiles, readRepoFile } from './github';
-import { searchBlog } from './blog-retriever';
+import { getPostTags, searchBlogJson } from './blog-retriever';
+import { hydeExpand } from '../blog-search/hyde';
 
 function githubUser(): string {
   return process.env.GITHUB_USER || 'nakomis';
@@ -74,7 +75,17 @@ export const TOOLS = [
   ),
 
   tool(
-    async ({ query }: { query: string }) => searchBlog(query),
+    async ({ query }: { query: string }) => {
+      const tags = await getPostTags();
+      const hypothetical = await hydeExpand(query, tags);
+      const results = await searchBlogJson(hypothetical);
+      if (results.length === 0) return 'No relevant blog content found.';
+      return results.map(r => {
+        const heading = r.heading ? ` — ${r.heading}` : '';
+        const link = `<a href="${r.postUrl}">${r.postTitle}${heading}</a>`;
+        return `POST_LINK: ${link}\nDATE: ${r.postDate}\nEXCERPT: ${r.excerpt}`;
+      }).join('\n\n---\n\n');
+    },
     {
       name: 'search_blog',
       description: "Search Martin's blog posts at blog.nakomis.com using semantic search. Use this when asked about his writing, technical articles, or any specific topic he may have blogged about. Pass the visitor's question or topic as the query.",
