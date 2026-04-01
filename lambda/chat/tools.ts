@@ -1,6 +1,6 @@
 import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { readPrivateFile } from './s3-reader';
+import { readPrivateFile, readBlogPost } from './s3-reader';
 import { fetchRepoReadme, listRepoFiles, readRepoFile } from './github';
 import { getPostTags, searchBlogJson } from './blog-retriever';
 import { hydeExpand } from '../blog-search/hyde';
@@ -70,6 +70,17 @@ export const TOOLS = [
       schema: z.object({
         repo_name: z.string().describe("The repository name"),
         path: z.string().describe("File path within the repo (e.g. 'lib/chat-stack.ts')"),
+      }),
+    }
+  ),
+
+  tool(
+    async ({ slug }: { slug: string }) => readBlogPost(slug),
+    {
+      name: 'get_blog_post',
+      description: "Fetch the full markdown content of a specific blog post by its slug. Use this when you need the complete text of a post — for example to answer a detailed question about it or to quote from it. The slug is the part of the URL after the domain, e.g. '2026-03-30-bootboots-cat-recognition'. Use search_blog first to find the relevant slug.",
+      schema: z.object({
+        slug: z.string().describe("The post slug, e.g. '2026-03-30-bootboots-cat-recognition'"),
       }),
     }
   ),
