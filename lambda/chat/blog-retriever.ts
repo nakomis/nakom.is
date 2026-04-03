@@ -10,7 +10,7 @@ const ddb     = new DynamoDBClient({});
 const EMBED_MODEL    = 'amazon.titan-embed-text-v2:0';
 const EMBED_DIMS     = 1024;
 const TOP_K          = 4;
-const MIN_SCORE      = 0.3;
+const MIN_SCORE      = 0.22;
 const EMBEDDINGS_KEY = 'blog-embeddings.json';
 
 // S3 record: id + binary embedding + fields needed for deduplication and HyDE tag expansion
