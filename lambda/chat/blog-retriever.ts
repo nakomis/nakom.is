@@ -23,12 +23,13 @@ interface S3EmbeddingRecord {
 
 // DynamoDB record: full text/metadata fetched after cosine search
 interface ChunkMeta {
-    post_slug:  string;
-    post_title: string;
-    post_date:  string;
-    post_url:   string;
-    heading:    string;
-    text:       string;
+    post_slug:    string;
+    post_title:   string;
+    post_date:    string;
+    post_url:     string;
+    post_excerpt: string;
+    heading:      string;
+    text:         string;
 }
 
 // In-memory representation after decoding
@@ -118,12 +119,13 @@ async function fetchChunkMeta(ids: string[]): Promise<Map<string, ChunkMeta>> {
     const metaMap = new Map<string, ChunkMeta>();
     for (const item of response.Responses?.[table] ?? []) {
         metaMap.set(item.id.S!, {
-            post_slug:  item.post_slug?.S  ?? '',
-            post_title: item.post_title?.S ?? '',
-            post_date:  item.post_date?.S  ?? '',
-            post_url:   item.post_url?.S   ?? '',
-            heading:    item.heading?.S    ?? '',
-            text:       item.text?.S       ?? '',
+            post_slug:    item.post_slug?.S    ?? '',
+            post_title:   item.post_title?.S   ?? '',
+            post_date:    item.post_date?.S    ?? '',
+            post_url:     item.post_url?.S     ?? '',
+            post_excerpt: item.post_excerpt?.S ?? '',
+            heading:      item.heading?.S      ?? '',
+            text:         item.text?.S         ?? '',
         });
     }
     return metaMap;
@@ -192,7 +194,7 @@ export async function searchBlogJson(query: string): Promise<BlogSearchResult[]>
             postDate:  meta.post_date,
             postUrl:   meta.post_url,
             heading:   meta.heading,
-            excerpt:   meta.text,
+            excerpt:   meta.post_excerpt || meta.text,
         };
     }).filter((r): r is BlogSearchResult => r !== null);
 }
