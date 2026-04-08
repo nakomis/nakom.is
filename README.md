@@ -2,6 +2,12 @@
 
 This project covers two things: a URL shortener that redirects short URLs such as [nakom.is/w](https://nakom.is/w) to longer ones (in this case, the BBC Weather page for my part of Edinburgh), and a personal profile page with an AI chat assistant that serves as the default root page at [nakom.is](https://nakom.is).
 
+## Support
+
+If you find this useful, please consider buying me a coffee:
+
+[![Donate with PayPal](https://www.paypalobjects.com/en_GB/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate?hosted_button_id=Q3BESC73EWVNN)
+
 ## Table of Contents
 
 <!-- toc -->
@@ -122,3 +128,9 @@ See [social-app/README.md](social-app/README.md) for full architecture details, 
 * CertificateStack
 * CloudfrontStack
 * Route53AdditionalStack
+
+## Support
+
+If you find this useful, please consider buying me a coffee:
+
+[![Donate with PayPal](https://www.paypalobjects.com/en_GB/i/btn/btn_donate_SM.gif)](https://www.paypal.com/donate?hosted_button_id=Q3BESC73EWVNN)
