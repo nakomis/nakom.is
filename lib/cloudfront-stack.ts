@@ -68,6 +68,15 @@ function handler(event) {
         });
 
         const additionalBehaviors: Record<string, cloudfront.BehaviorOptions> = {
+            // ads.txt must be served directly (no redirect) so that Google Ads can fetch it
+            // from nakomis.com/ads.txt. Without this explicit behaviour the default behaviour's
+            // redirect function would send the request to blog.nakomis.com/ads.txt instead.
+            'ads.txt': {
+                origin: apiOrigin,
+                allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+                viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            },
             'chat': {
                 origin: apiOrigin,
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
