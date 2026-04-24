@@ -132,7 +132,7 @@ export class ChatStack extends cdk.Stack {
         // Grant DynamoDB access
         rateLimitTable.grant(this.chatFunction, 'dynamodb:UpdateItem');
         cvChatLogsTable.grant(this.chatFunction, 'dynamodb:PutItem');
-        blogChunksTable.grant(this.chatFunction, 'dynamodb:GetItem', 'dynamodb:BatchGetItem', 'dynamodb:BatchWriteItem');
+        blogChunksTable.grant(this.chatFunction, 'dynamodb:GetItem', 'dynamodb:BatchGetItem');
 
         // Grant SSM read access for the Anthropic API key
         anthropicApiKeyParam.grantRead(this.chatFunction);
