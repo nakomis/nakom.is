@@ -13,12 +13,18 @@ const TOP_K          = 4;
 const MIN_SCORE      = 0.22;
 const EMBEDDINGS_KEY = 'blog-embeddings.json';
 
-// S3 record: id + binary embedding + fields needed for deduplication and HyDE tag expansion
+// S3 record: id + binary embedding + all chunk metadata
 interface S3EmbeddingRecord {
-    id:        string;
-    post_slug: string;
-    post_tags: string[];
-    embedding: string;  // base64-encoded Float32Array
+    id:           string;
+    post_slug:    string;
+    post_tags:    string[];
+    post_title:   string;
+    post_date:    string;
+    post_url:     string;
+    heading:      string;
+    text:         string;
+    post_excerpt: string;
+    embedding:    string;  // base64-encoded Float32Array
 }
 
 // DynamoDB record: full text/metadata fetched after cosine search
@@ -34,10 +40,16 @@ interface ChunkMeta {
 
 // In-memory representation after decoding
 interface DecodedRecord {
-    id:        string;
-    post_slug: string;
-    post_tags: string[];
-    embedding: Float32Array;
+    id:           string;
+    post_slug:    string;
+    post_tags:    string[];
+    post_title:   string;
+    post_date:    string;
+    post_url:     string;
+    heading:      string;
+    text:         string;
+    post_excerpt: string;
+    embedding:    Float32Array;
 }
 
 // Module-level cache — loaded once per Lambda container
@@ -64,14 +76,40 @@ async function loadEmbeddings(): Promise<DecodedRecord[]> {
 
     // Decode base64 Float32 embeddings once at cold start
     embeddingsCache = records.map(r => ({
-        id:        r.id,
-        post_slug: r.post_slug,
-        post_tags: r.post_tags,
-        embedding: decodeEmbedding(r.embedding),
+        id:           r.id,
+        post_slug:    r.post_slug,
+        post_tags:    r.post_tags,
+        post_title:   r.post_title   ?? '',
+        post_date:    r.post_date    ?? '',
+        post_url:     r.post_url     ?? '',
+        heading:      r.heading      ?? '',
+        text:         r.text         ?? '',
+        post_excerpt: r.post_excerpt ?? '',
+        embedding:    decodeEmbedding(r.embedding),
     }));
 
     console.log(`Blog embeddings loaded: ${embeddingsCache.length} chunks`);
     return embeddingsCache;
+}
+
+
+function tokenize(query: string): string[] {
+    return query.toLowerCase()
+        .replace(/[^a-z0-9'\s-]/g, ' ')
+        .split(/\s+/)
+        .filter(t => t.length >= 2);
+}
+
+function keywordScore(text: string, heading: string, title: string, terms: string[]): number {
+    if (terms.length === 0) return 0;
+    const haystack = `${title} ${heading} ${text}`.toLowerCase();
+    let count = 0;
+    for (const term of terms) {
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const matches = haystack.match(new RegExp(`\\b${escaped}\\b`, 'g'));
+        if (matches) count += matches.length;
+    }
+    return count / Math.sqrt(haystack.length + 1);
 }
 
 function decodeEmbedding(b64: string): Float32Array {
@@ -195,6 +233,104 @@ export async function searchBlogJson(query: string): Promise<BlogSearchResult[]>
             postUrl:   meta.post_url,
             heading:   meta.heading,
             excerpt:   meta.post_excerpt || meta.text,
+        };
+    }).filter((r): r is BlogSearchResult => r !== null);
+}
+
+/**
+ * Full-text keyword search over blog chunks (no embedding call).
+ * Uses term-frequency scoring normalised by text length.
+ */
+export async function searchBlogJsonFullText(query: string): Promise<BlogSearchResult[]> {
+    const records = await loadEmbeddings();
+    const terms   = tokenize(query);
+    if (terms.length === 0) return [];
+
+    const scored = records
+        .map(r => ({ r, score: keywordScore(r.text, r.heading, r.post_title, terms) }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score);
+
+    const seen = new Set<string>();
+    return scored
+        .filter(({ r }) => { if (seen.has(r.post_slug)) return false; seen.add(r.post_slug); return true; })
+        .slice(0, TOP_K)
+        .map(({ r }) => ({
+            id:        r.id,
+            postSlug:  r.post_slug,
+            postTitle: r.post_title,
+            postDate:  r.post_date,
+            postUrl:   r.post_url,
+            heading:   r.heading,
+            excerpt:   r.post_excerpt || r.text,
+        }));
+}
+
+/**
+ * Hybrid search combining semantic similarity (HyDE query) with keyword matching (raw query)
+ * using Reciprocal Rank Fusion (RRF, k=60).
+ *
+ * @param semanticQuery  HyDE-expanded hypothetical passage for the embedding component.
+ * @param fulltextQuery  Raw user query for the keyword component.
+ */
+export async function searchBlogJsonHybrid(semanticQuery: string, fulltextQuery: string): Promise<BlogSearchResult[]> {
+    const [records, queryEmbedding] = await Promise.all([
+        loadEmbeddings(),
+        embedQuery(semanticQuery),
+    ]);
+
+    const terms = tokenize(fulltextQuery);
+    const recordById = new Map(records.map(r => [r.id, r]));
+
+    // Semantic ranking
+    const semanticScored = records
+        .map(r => ({ id: r.id, post_slug: r.post_slug, score: cosineSimilarity(r.embedding, queryEmbedding) }))
+        .sort((a, b) => b.score - a.score);
+    const semanticRank = new Map<string, number>(semanticScored.map((r, i) => [r.id, i + 1]));
+
+    // Fulltext ranking
+    const fulltextScored = terms.length > 0
+        ? records
+              .map(r => ({ id: r.id, post_slug: r.post_slug, score: keywordScore(r.text, r.heading, r.post_title, terms) }))
+              .filter(({ score }) => score > 0)
+              .sort((a, b) => b.score - a.score)
+        : [];
+    const fulltextRank = new Map<string, number>(fulltextScored.map((r, i) => [r.id, i + 1]));
+
+    // RRF fusion over union of candidates
+    const k = 60;
+    const CANDIDATES = TOP_K * 10;
+    const candidateIds = new Set([
+        ...semanticScored.slice(0, CANDIDATES).map(r => r.id),
+        ...fulltextScored.slice(0, CANDIDATES).map(r => r.id),
+    ]);
+
+    const rrfScored = [...candidateIds]
+        .map(id => {
+            const sRank = semanticRank.get(id);
+            const fRank = fulltextRank.get(id);
+            const score = (sRank !== undefined ? 1 / (k + sRank) : 0)
+                        + (fRank !== undefined ? 1 / (k + fRank) : 0);
+            return { id, score, post_slug: recordById.get(id)?.post_slug ?? '' };
+        })
+        .sort((a, b) => b.score - a.score);
+
+    const seen = new Set<string>();
+    const top = rrfScored
+        .filter(({ post_slug }) => { if (seen.has(post_slug)) return false; seen.add(post_slug); return true; })
+        .slice(0, TOP_K);
+
+    return top.map(({ id }) => {
+        const r = recordById.get(id);
+        if (!r) return null;
+        return {
+            id,
+            postSlug:  r.post_slug,
+            postTitle: r.post_title,
+            postDate:  r.post_date,
+            postUrl:   r.post_url,
+            heading:   r.heading,
+            excerpt:   r.post_excerpt || r.text,
         };
     }).filter((r): r is BlogSearchResult => r !== null);
 }

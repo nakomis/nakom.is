@@ -2,7 +2,7 @@ import { tool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { readPrivateFile, readBlogPost } from './s3-reader';
 import { fetchRepoReadme, listRepoFiles, readRepoFile } from './github';
-import { getPostTags, searchBlogJson } from './blog-retriever';
+import { getPostTags, searchBlogJson, searchBlogJsonFullText, searchBlogJsonHybrid } from './blog-retriever';
 import { hydeExpand } from '../blog-search/hyde';
 
 function githubUser(): string {
@@ -86,10 +86,20 @@ export const TOOLS = [
   ),
 
   tool(
-    async ({ query }: { query: string }) => {
-      const tags = await getPostTags();
-      const hypothetical = await hydeExpand(query, tags);
-      const results = await searchBlogJson(hypothetical);
+    async ({ query, mode }: { query: string; mode?: string }) => {
+      let results;
+      if (mode === 'fulltext') {
+        results = await searchBlogJsonFullText(query);
+      } else if (mode === 'semantic') {
+        const tags = await getPostTags();
+        const hypothetical = await hydeExpand(query, tags);
+        results = await searchBlogJson(hypothetical);
+      } else {
+        // hybrid (default): HyDE for semantic component, raw query for keyword component
+        const tags = await getPostTags();
+        const hypothetical = await hydeExpand(query, tags);
+        results = await searchBlogJsonHybrid(hypothetical, query);
+      }
       if (results.length === 0) return 'No relevant blog content found.';
       return results.map(r => {
         const heading = r.heading ? ` — ${r.heading}` : '';
@@ -99,9 +109,10 @@ export const TOOLS = [
     },
     {
       name: 'search_blog',
-      description: "Search Martin's blog posts at blog.nakomis.com using semantic search. Use this when asked about his writing, technical articles, or any specific topic he may have blogged about. Pass the visitor's question or topic as the query.",
+      description: "Search Martin's blog posts at blog.nakomis.com. Use this when asked about his writing, technical articles, or any specific topic he may have blogged about.\n\nChoose the mode based on the query:\n- 'hybrid' (default) — best for most queries; combines semantic understanding with keyword matching\n- 'semantic' — use when the visitor describes a concept or asks a vague question (e.g. 'what has he written about consciousness?')\n- 'fulltext' — use for specific terms, error messages, function names, or quoted phrases (e.g. 'RRF', 'websearch_to_tsquery')",
       schema: z.object({
-        query: z.string().describe("The topic or question to search for in the blog posts"),
+        query: z.string().describe("The topic or question to search for"),
+        mode: z.enum(['hybrid', 'semantic', 'fulltext']).optional().describe("Search mode — defaults to 'hybrid'"),
       }),
     }
   ),
