@@ -27,7 +27,7 @@ export class LinkedInStack extends cdk.Stack {
             functionName: 'nakomis-linkedin',
             entry: 'lambda/linkedin/handler.ts',
             handler: 'handler',
-            runtime: lambda.Runtime.NODEJS_20_X,
+            runtime: lambda.Runtime.NODEJS_22_X,
             memorySize: 256,
             timeout: Duration.seconds(30),
             logGroup,
