@@ -31,13 +31,17 @@ export class ChatStack extends cdk.Stack {
             `blog-nakom-is-${this.region}-${this.account}`
         );
 
-        // Pre-provisioned SSM parameters — not managed by CDK, referenced for IAM grants only
+        // Pre-provisioned SSM parameter — not managed by CDK, referenced for IAM grants only
         const anthropicApiKeyParam = ssm.StringParameter.fromStringParameterName(
             this, 'AnthropicApiKey', '/nakom.is/anthropic-api-key',
         );
-        const martinEmailParam = ssm.StringParameter.fromStringParameterName(
-            this, 'MartinEmailParam', '/nakom.is/martin-email',
-        );
+
+        // Created by CDK; set the real value via console or CLI after first deploy
+        const martinEmailParam = new ssm.StringParameter(this, 'MartinEmailParam', {
+            parameterName: '/nakom.is/martin-email',
+            description: 'Contact email address for nakom.is chat notifications',
+            stringValue: 'PLACEHOLDER',
+        });
 
         // DynamoDB Table for blog chunk metadata (text fetched after cosine search)
         const blogChunksTable = new dynamodb.TableV2(this, 'BlogChunks', {
