@@ -31,10 +31,12 @@ export class ChatStack extends cdk.Stack {
             `blog-nakom-is-${this.region}-${this.account}`
         );
 
-        // Pre-provisioned SSM parameter — not managed by CDK, referenced for IAM grants only
-        const anthropicApiKeyParam = ssm.StringParameter.fromStringParameterName(
-            this, 'AnthropicApiKey', '/nakom.is/anthropic-api-key',
-        );
+        // Created by CDK; set the real value via console or CLI after first deploy
+        const anthropicApiKeyParam = new ssm.StringParameter(this, 'AnthropicApiKey', {
+            parameterName: '/nakom.is/anthropic-api-key',
+            description: 'Anthropic API key for nakom.is chat feature',
+            stringValue: 'PLACEHOLDER',
+        });
 
         // Created by CDK; set the real value via console or CLI after first deploy
         const martinEmailParam = new ssm.StringParameter(this, 'MartinEmailParam', {

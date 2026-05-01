@@ -36,19 +36,21 @@ See plan file for full architecture. Key points:
 
 No `secrets.json` is needed — `cdk synth` and `cdk deploy` run without any local secrets file.
 
-The Anthropic API key must be provisioned manually in SSM before deploying `ChatStack`:
+Both `/nakom.is/anthropic-api-key` and `/nakom.is/martin-email` are created by CDK with a `PLACEHOLDER` value on first deploy. Update them via the console or CLI afterwards:
 
 ```bash
 AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
   --name /nakom.is/anthropic-api-key \
   --value "sk-ant-..." \
-  --type SecureString \
+  --type String --overwrite \
+  --region eu-west-2
+
+AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
+  --name /nakom.is/martin-email \
+  --value "martin@nakomis.com" \
+  --type String --overwrite \
   --region eu-west-2
 ```
-
-CDK references this parameter for IAM grants but does not manage its value.
-
-`/nakom.is/martin-email` is created by CDK with a `PLACEHOLDER` value on first deploy — update it via the console or CLI afterwards.
 
 ## Blog RAG search
 
