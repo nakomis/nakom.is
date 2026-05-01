@@ -14,31 +14,44 @@ import { SESStack } from '../lib/ses-stack';
 import { ChatStack } from '../lib/chat-stack';
 import { CvStack } from '../lib/cv-stack';
 import { LinkedInStack } from '../lib/linkedin-stack';
-import { PostgresQueryStack } from '../lib/postgres-query-stack';
+import { DeployEnv } from '../lib/deploy-env';
+
+const npmEnvironment = process.env.NPM_ENVIRONMENT;
+if (!npmEnvironment) throw new Error('NPM_ENVIRONMENT is not set. Use NPM_ENVIRONMENT=sandbox|prod');
+if (npmEnvironment !== 'sandbox' && npmEnvironment !== 'prod') {
+    throw new Error(`NPM_ENVIRONMENT must be 'sandbox' or 'prod', got '${npmEnvironment}'`);
+}
+const deployEnv = npmEnvironment as DeployEnv;
+const isProd = deployEnv === 'prod';
+
+const accountId = isProd ? '637423226886' : '975050268859';
+const londonEnv = { env: { account: accountId, region: 'eu-west-2' } };
+const nvirginiaEnv = { env: { account: accountId, region: 'us-east-1' } };
 
 const app = new cdk.App();
 
-const londonEnv = { env: { account: '637423226886', region: 'eu-west-2' } };
-const nvirginiaEnv = { env: { account: '637423226886', region: 'us-east-1' } };
-
-const s3Stack = new S3Stack(app, "S3Stack", londonEnv);
-const lambdaStack = new LambdaStack(app, "LambdaStack", londonEnv);
+const s3Stack = new S3Stack(app, "S3Stack", { ...londonEnv, deployEnv });
+const lambdaStack = new LambdaStack(app, "LambdaStack", { ...londonEnv, deployEnv });
 const r53Stack = new Route53Stack(app, 'Route53Stack', {
     ...londonEnv,
-    crossRegionReferences: true
+    deployEnv,
+    crossRegionReferences: true,
 });
 const sesStack = new SESStack(app, 'SESStack', {
     ...londonEnv,
-    nakomIsZone: r53Stack.hostedZones.find(z => z.zoneName === 'nakom.is')!.zone,
+    deployEnv,
+    nakomIsZone: r53Stack.hostedZones.find(z => z.zoneName === r53Stack.nakomIsHostedZone.zoneName)!.zone,
 });
 const chatStack = new ChatStack(app, 'ChatStack', {
     ...londonEnv,
+    deployEnv,
     sesIdentity: sesStack.emailIdentity,
     sesFromAddress: sesStack.fromAddress,
     privateBucket: s3Stack.privateBucket,
 });
 const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
     ...londonEnv,
+    deployEnv,
     urlShortener: lambdaStack.getLambdaAlias(),
     bucket: s3Stack.s3bucket(),
     executionRole: s3Stack.executionRole(),
@@ -47,39 +60,44 @@ const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
 });
 const certificateStack = new CertificateStack(app, 'CertificateStack', {
     ...nvirginiaEnv,
+    deployEnv,
     crossRegionReferences: true,
-    hostedZones: r53Stack.hostedZones
+    hostedZones: r53Stack.hostedZones,
 });
 const cloudfrontStack = new CloudfrontStack(app, 'CloudfrontStack', {
     ...londonEnv,
+    deployEnv,
     gateway: apiGatewayStack.gateway,
     certificate: certificateStack.certificate,
     crossRegionReferences: true,
     apiKeyString: apiGatewayStack.apiKeyString,
-    enableStreamChat: true,
+    enableStreamChat: isProd,
 });
 const route53AdditionalStack = new Route53AdditionalStack(app, 'Route53AdditionalStack', {
     ...londonEnv,
     cloudfront: cloudfrontStack.distrubution,
     hostedZones: r53Stack.hostedZones.filter(z => !z.zoneName.includes('silverknowes')),
-    crossRegionReferences: true
+    crossRegionReferences: true,
 });
 const iamSecretStack = new IAMSecretStack(app, 'IAMSecretStack', {
     ...londonEnv,
-    redirectsTable: lambdaStack.redirectTable
+    deployEnv,
+    redirectsTable: lambdaStack.redirectTable,
 });
 const cvStack = new CvStack(app, 'CvStack', {
     ...londonEnv,
+    deployEnv,
     privateBucket: s3Stack.privateBucket,
     publicBucket: s3Stack.bucket,
     distribution: cloudfrontStack.distrubution,
 });
 const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
     ...londonEnv,
+    deployEnv,
     privateBucket: s3Stack.privateBucket,
 });
-// VPC-enabled Lambda for PostgreSQL queries
-const postgresQueryStack = new PostgresQueryStack(app, 'PostgresQueryStack', londonEnv);
+// PostgresQueryStack omitted until NADM-3 (sandbox RDS) and NADM-4 (name-based lookups) are done.
+// Re-enable and parameterise as part of NAKO-32.
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");
 const { version: infraVersion } = JSON.parse(fs.readFileSync('./version.json', 'utf-8'));

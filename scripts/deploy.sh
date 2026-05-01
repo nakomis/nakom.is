@@ -4,6 +4,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
+# --- Require NPM_ENVIRONMENT ---
+if [[ -z "${NPM_ENVIRONMENT:-}" ]]; then
+  echo "ERROR: NPM_ENVIRONMENT is not set. Use NPM_ENVIRONMENT=sandbox|prod bash scripts/deploy.sh"
+  exit 1
+fi
+export NPM_ENVIRONMENT
+
 # --- Parse flags ---
 BUMP="patch"
 for arg in "$@"; do

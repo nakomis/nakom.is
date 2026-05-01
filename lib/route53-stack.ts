@@ -5,45 +5,67 @@ import { Construct } from 'constructs';
 import legacyNakomIs from '../route53/nakom.is.json';
 import legacyNakomisCoUk from '../route53/nakomis.co.uk.json';
 import legacyNakomisCom from '../route53/nakomis.com.json';
+import { DeployEnv } from './deploy-env';
 
 export interface Route53StackProps extends cdk.StackProps {
-
+    deployEnv: DeployEnv;
 }
 
 export type R53Zone = {
     zoneName: string,
     zone: route53.IHostedZone,
-    legacyRecords: typeof legacyNakomIs | typeof legacyNakomisCoUk | typeof legacyNakomisCom
+    legacyRecords: { ResourceRecordSets: any[] }
 }
 
 export class Route53Stack extends cdk.Stack {
     readonly hostedZones: R53Zone[] = [];
     readonly nakomIsHostedZone: route53.IHostedZone;
 
-    constructor(scope: Construct, id: string, props?: Route53StackProps) {
+    constructor(scope: Construct, id: string, props: Route53StackProps) {
         super(scope, id, props);
 
-        this.nakomIsHostedZone = new route53.HostedZone(this, 'NakomIsHostedZone', {
-            zoneName: 'nakom.is',
-        });
-        const nakomisComHostedZone = new route53.HostedZone(this, 'NakomisComHostedZone', {
-            zoneName: 'nakomis.com',
-        });
-        const nakomisCoUkHostedZone = new route53.HostedZone(this, 'NakomisCoUkHostedZone', {
-            zoneName: 'nakomis.co.uk',
-        });
-        const silverknowesEastwayComHostedZone = route53.HostedZone.fromLookup(this, 'SilverknowesEastwayComHostedZone', {
-            domainName: 'silverknoweseastway.com',
-        });
-        const silverknowesEastwayOrgHostedZone = route53.HostedZone.fromLookup(this, 'SilverknowesEastwayOrgHostedZone', {
-            domainName: 'silverknoweseastway.org',
-        });
+        if (props.deployEnv === 'sandbox') {
+            this.nakomIsHostedZone = route53.HostedZone.fromLookup(
+                this, 'SandboxHostedZone',
+                { domainName: 'sandbox.nakom.is' },
+            );
+            const sandboxNakomisComZone = route53.HostedZone.fromLookup(
+                this, 'SandboxNakomisComHostedZone',
+                { domainName: 'sandbox.nakomis.com' },
+            );
+            this.hostedZones.push({
+                zoneName: 'sandbox.nakom.is',
+                zone: this.nakomIsHostedZone,
+                legacyRecords: { ResourceRecordSets: [] },
+            });
+            this.hostedZones.push({
+                zoneName: 'sandbox.nakomis.com',
+                zone: sandboxNakomisComZone,
+                legacyRecords: { ResourceRecordSets: [] },
+            });
+        } else {
+            this.nakomIsHostedZone = new route53.HostedZone(this, 'NakomIsHostedZone', {
+                zoneName: 'nakom.is',
+            });
+            const nakomisComHostedZone = new route53.HostedZone(this, 'NakomisComHostedZone', {
+                zoneName: 'nakomis.com',
+            });
+            const nakomisCoUkHostedZone = new route53.HostedZone(this, 'NakomisCoUkHostedZone', {
+                zoneName: 'nakomis.co.uk',
+            });
+            const silverknowesEastwayComHostedZone = route53.HostedZone.fromLookup(this, 'SilverknowesEastwayComHostedZone', {
+                domainName: 'silverknoweseastway.com',
+            });
+            const silverknowesEastwayOrgHostedZone = route53.HostedZone.fromLookup(this, 'SilverknowesEastwayOrgHostedZone', {
+                domainName: 'silverknoweseastway.org',
+            });
 
-        this.hostedZones.push({zoneName: this.nakomIsHostedZone.zoneName, zone: this.nakomIsHostedZone, legacyRecords: legacyNakomIs});
-        this.hostedZones.push({zoneName: nakomisComHostedZone.zoneName, zone: nakomisComHostedZone, legacyRecords: legacyNakomisCom});
-        this.hostedZones.push({zoneName: nakomisCoUkHostedZone.zoneName, zone: nakomisCoUkHostedZone, legacyRecords: legacyNakomisCoUk});
-        this.hostedZones.push({zoneName: silverknowesEastwayComHostedZone.zoneName, zone: silverknowesEastwayComHostedZone, legacyRecords: {ResourceRecordSets: []}});
-        this.hostedZones.push({zoneName: silverknowesEastwayOrgHostedZone.zoneName, zone: silverknowesEastwayOrgHostedZone, legacyRecords: {ResourceRecordSets: []}});
+            this.hostedZones.push({zoneName: this.nakomIsHostedZone.zoneName, zone: this.nakomIsHostedZone, legacyRecords: legacyNakomIs});
+            this.hostedZones.push({zoneName: nakomisComHostedZone.zoneName, zone: nakomisComHostedZone, legacyRecords: legacyNakomisCom});
+            this.hostedZones.push({zoneName: nakomisCoUkHostedZone.zoneName, zone: nakomisCoUkHostedZone, legacyRecords: legacyNakomisCoUk});
+            this.hostedZones.push({zoneName: silverknowesEastwayComHostedZone.zoneName, zone: silverknowesEastwayComHostedZone, legacyRecords: {ResourceRecordSets: []}});
+            this.hostedZones.push({zoneName: silverknowesEastwayOrgHostedZone.zoneName, zone: silverknowesEastwayOrgHostedZone, legacyRecords: {ResourceRecordSets: []}});
+        }
 
         this.hostedZones.forEach(zone => {
             // Import the legacy records
@@ -59,7 +81,7 @@ export class Route53Stack extends cdk.Stack {
                             new route53.ARecord(this, `${zone.zone.zoneName}${rs.Type}${rs.Name}`, {
                                 recordName: rs.Name,
                                 zone: zone.zone,
-                                target: route53.RecordTarget.fromValues(...rs.ResourceRecords.map((r) => r.Value)),
+                                target: route53.RecordTarget.fromValues(...rs.ResourceRecords.map((r: any) => r.Value)),
                                 ttl: rs.TTL ? cdk.Duration.seconds(rs.TTL) : undefined
                             })
                         }
@@ -77,7 +99,7 @@ export class Route53Stack extends cdk.Stack {
                             zone: zone.zone,
                             recordName: rs.Name,
                             ttl: rs.TTL ? cdk.Duration.seconds(rs.TTL) : undefined,
-                            values: rs.ResourceRecords!.map(rec => {
+                            values: rs.ResourceRecords!.map((rec: any) => {
                                 return { priority: +rec.Value.split(" ")[0], hostName: rec.Value.split(" ")[1] }
                             })
                         });
@@ -87,7 +109,7 @@ export class Route53Stack extends cdk.Stack {
                             zone: zone.zone,
                             recordName: rs.Name,
                             ttl: rs.TTL ? cdk.Duration.seconds(rs.TTL) : undefined,
-                            values: rs.ResourceRecords!.map(rec => rec.Value.replace(/"/gi, ''))
+                            values: rs.ResourceRecords!.map((rec: any) => rec.Value.replace(/"/gi, ''))
                         });
                         break;
                     default:
