@@ -9,33 +9,6 @@ import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as fs from 'fs';
-import * as path from 'path';
-
-function loadSecrets(): { anthropicApiKey: string; martinEmail: string } {
-    const secretsPath = path.join(__dirname, '..', 'secrets.json');
-    if (!fs.existsSync(secretsPath)) {
-        throw new Error(
-            `secrets.json not found at ${secretsPath}\n` +
-            `Copy secrets.json.template to secrets.json and fill in your values.\n` +
-            `This file is .gitignored and will not be committed.`
-        );
-    }
-    const secrets = JSON.parse(fs.readFileSync(secretsPath, 'utf-8'));
-    if (!secrets.anthropicApiKey || secrets.anthropicApiKey.startsWith('sk-ant-api03-YOUR')) {
-        throw new Error(
-            `secrets.json contains a placeholder API key.\n` +
-            `Please replace it with your actual Anthropic API key.`
-        );
-    }
-    if (!secrets.martinEmail || secrets.martinEmail.includes('your-email@')) {
-        throw new Error(
-            `secrets.json is missing a valid martinEmail.\n` +
-            `Please add your email address so the chat widget can contact you.`
-        );
-    }
-    return secrets;
-}
 
 export interface ChatStackProps extends cdk.StackProps {
     sesIdentity: ses.EmailIdentity;
@@ -52,19 +25,24 @@ export class ChatStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: ChatStackProps) {
         super(scope, id, props);
 
-        const secrets = loadSecrets();
-
         // Blog bucket (separate CDK app — reference by name, no cross-stack dependency)
         const blogBucket = s3.Bucket.fromBucketName(
             this, 'BlogBucket',
             `blog-nakom-is-${this.region}-${this.account}`
         );
 
-        // SSM Parameter for Anthropic API key
+        // Created by CDK; set the real value via console or CLI after first deploy
         const anthropicApiKeyParam = new ssm.StringParameter(this, 'AnthropicApiKey', {
             parameterName: '/nakom.is/anthropic-api-key',
             description: 'Anthropic API key for nakom.is chat feature',
-            stringValue: secrets.anthropicApiKey,
+            stringValue: 'PLACEHOLDER',
+        });
+
+        // Created by CDK; set the real value via console or CLI after first deploy
+        const martinEmailParam = new ssm.StringParameter(this, 'MartinEmailParam', {
+            parameterName: '/nakom.is/martin-email',
+            description: 'Contact email address for nakom.is chat notifications',
+            stringValue: 'PLACEHOLDER',
         });
 
         // DynamoDB Table for blog chunk metadata (text fetched after cosine search)
@@ -116,7 +94,6 @@ export class ChatStack extends cdk.Stack {
                 DAILY_RATE_LIMIT: '100',
                 GITHUB_USER: 'nakomis',
                 RATE_LIMIT_TABLE: rateLimitTable.tableName,
-                MARTIN_EMAIL: secrets.martinEmail,
                 SES_FROM_EMAIL: props.sesFromAddress,
                 PRIVATE_BUCKET: props.privateBucket.bucketName,
                 BLOG_BUCKET: blogBucket.bucketName,
@@ -134,8 +111,9 @@ export class ChatStack extends cdk.Stack {
         cvChatLogsTable.grant(this.chatFunction, 'dynamodb:PutItem');
         blogChunksTable.grant(this.chatFunction, 'dynamodb:GetItem', 'dynamodb:BatchGetItem');
 
-        // Grant SSM read access for the Anthropic API key
+        // Grant SSM read access for the Anthropic API key and contact email
         anthropicApiKeyParam.grantRead(this.chatFunction);
+        martinEmailParam.grantRead(this.chatFunction);
 
         // Grant SES send permission for the nakom.is domain identity and any
         // individually-verified @nakom.is email addresses in this account.

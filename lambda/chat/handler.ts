@@ -41,6 +41,7 @@ const sesClient = new SESClient({});
 // Initialised once at cold start; reused across warm invocations
 let modelReady = false;
 let cachedModel: ChatAnthropic | null = null;
+let cachedMartinEmail: string | null = null;
 
 async function getModel(): Promise<ChatAnthropic> {
   if (cachedModel) return cachedModel;
@@ -59,6 +60,15 @@ async function getModel(): Promise<ChatAnthropic> {
 
   modelReady = true;
   return cachedModel;
+}
+
+async function getMartinEmail(): Promise<string> {
+  if (cachedMartinEmail) return cachedMartinEmail;
+  const result = await ssmClient.send(new GetParameterCommand({
+    Name: '/nakom.is/martin-email',
+  }));
+  cachedMartinEmail = result.Parameter!.Value!;
+  return cachedMartinEmail;
 }
 
 interface ChatRequestBody {
@@ -145,7 +155,7 @@ export const handler = async (event: {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid email address' }) };
       }
 
-      const martinEmail = process.env.MARTIN_EMAIL!;
+      const martinEmail = await getMartinEmail();
       const fromEmail = process.env.SES_FROM_EMAIL!;
 
       const conversationSummary = messages

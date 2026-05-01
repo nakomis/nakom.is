@@ -33,7 +33,24 @@ See plan file for full architecture. Key points:
 - API key injected by CloudFront as `x-api-key` header (never in client code)
 
 ## Secrets
-`secrets.json` (gitignored) holds the Anthropic API key and Martin's contact email. Copy from `secrets.json.template` to get started.
+
+No `secrets.json` is needed — `cdk synth` and `cdk deploy` run without any local secrets file.
+
+Both `/nakom.is/anthropic-api-key` and `/nakom.is/martin-email` are created by CDK with a `PLACEHOLDER` value on first deploy. Update them via the console or CLI afterwards:
+
+```bash
+AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
+  --name /nakom.is/anthropic-api-key \
+  --value "sk-ant-..." \
+  --type String --overwrite \
+  --region eu-west-2
+
+AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
+  --name /nakom.is/martin-email \
+  --value "martin@nakomis.com" \
+  --type String --overwrite \
+  --region eu-west-2
+```
 
 ## Blog RAG search
 
