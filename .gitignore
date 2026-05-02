@@ -29,7 +29,6 @@ s3contents/social-app
 
 # Lambda chat dependencies
 lambda/chat/node_modules
-lambda/chat/package-lock.json
 .worktrees/
 config.json
 
