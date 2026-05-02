@@ -46,7 +46,7 @@ export class LambdaStack extends cdk.Stack {
         this.redirectsFunctionAlias = new lambda.Alias(this, 'RedirectsFunctionAlias', {
             aliasName: 'live',
             version: this.redirectsFunction.currentVersion,
-            ...(props.deployEnv === 'prod' && { provisionedConcurrentExecutions: 1 }),
+            provisionedConcurrentExecutions: 1,
         });
 
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:GetItem", "dynamodb:PutItem");
