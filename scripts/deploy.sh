@@ -4,6 +4,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
+# --- Require NPM_ENVIRONMENT ---
+if [[ -z "${NPM_ENVIRONMENT:-}" ]]; then
+  echo "ERROR: NPM_ENVIRONMENT is not set. Use NPM_ENVIRONMENT=sandbox|prod bash scripts/deploy.sh"
+  exit 1
+fi
+export NPM_ENVIRONMENT
+
+if [[ "$NPM_ENVIRONMENT" == "sandbox" ]]; then
+  AWS_PROFILE="nakom.is-sandbox"
+else
+  AWS_PROFILE="nakom.is-admin"
+fi
+export AWS_PROFILE
+
 # --- Parse flags ---
 BUMP="patch"
 for arg in "$@"; do
@@ -46,7 +60,7 @@ echo "{ \"version\": \"$RELEASE_VERSION\" }" > "$VERSION_FILE"
 # --- CDK synth (validate before committing) ---
 echo "Running cdk synth..."
 cd "$REPO_DIR"
-AWS_PROFILE=nakom.is-admin cdk synth
+cdk synth
 
 # --- Commit and tag ---
 git add "$VERSION_FILE"
@@ -55,7 +69,7 @@ git tag "infra/$RELEASE_VERSION"
 
 # --- Deploy ---
 echo "Deploying all stacks..."
-AWS_PROFILE=nakom.is-admin cdk deploy --all --require-approval never
+cdk deploy --all --require-approval never
 
 # --- Compute next SNAPSHOT ---
 case "$BUMP" in

@@ -9,25 +9,30 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
+import { DeployEnv, envSuffix, logPrefix } from './deploy-env';
 
 export interface CvStackProps extends cdk.StackProps {
     privateBucket: s3.Bucket;
     publicBucket: s3.Bucket;
     distribution: cloudfront.Distribution;
+    deployEnv: DeployEnv;
 }
 
 export class CvStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: CvStackProps) {
         super(scope, id, props);
 
+        const suffix = envSuffix(props.deployEnv);
+        const logPfx = logPrefix(props.deployEnv);
+
         const logGroup = new LogGroup(this, 'CvLambdaLogs', {
-            logGroupName: '/nakom.is/lambda/cv',
+            logGroupName: `${logPfx}/lambda/cv`,
             retention: RetentionDays.SIX_MONTHS,
         });
 
         // CV generation Lambda: reads cv.md from private bucket, renders PDF via Chromium, writes to public bucket
         const cvFunction = new NodejsFunction(this, 'CvFunction', {
-            functionName: 'nakomis-cv',
+            functionName: `nakomis-cv${suffix}`,
             entry: 'lambda/cv/handler.ts',
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,

@@ -1,9 +1,10 @@
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
+import { DeployEnv } from './deploy-env';
 
 export interface GithubCiStackProps extends cdk.StackProps {
-  deployEnv: 'sandbox' | 'prod';
+  deployEnv: DeployEnv;
   githubOidcProviderArn: string;
 }
 

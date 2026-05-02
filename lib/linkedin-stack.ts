@@ -8,23 +8,28 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
+import { DeployEnv, envSuffix, logPrefix } from './deploy-env';
 
 export interface LinkedInStackProps extends cdk.StackProps {
     privateBucket: s3.Bucket;
+    deployEnv: DeployEnv;
 }
 
 export class LinkedInStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: LinkedInStackProps) {
         super(scope, id, props);
 
+        const suffix = envSuffix(props.deployEnv);
+        const logPfx = logPrefix(props.deployEnv);
+
         const logGroup = new LogGroup(this, 'LinkedInLambdaLogs', {
-            logGroupName: '/nakom.is/lambda/linkedin',
+            logGroupName: `${logPfx}/lambda/linkedin`,
             retention: RetentionDays.SIX_MONTHS,
         });
 
         // LinkedIn parser Lambda: reads CSVs from linkedin-export/ prefix, generates linkedin.md
         const linkedInFunction = new NodejsFunction(this, 'LinkedInFunction', {
-            functionName: 'nakomis-linkedin',
+            functionName: `nakomis-linkedin${suffix}`,
             entry: 'lambda/linkedin/handler.ts',
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,

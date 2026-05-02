@@ -10,6 +10,11 @@
     "test": "jest",
     "cdk": "cdk",
     "deploy": "bash scripts/deploy.sh",
+    "deploy-sandbox": "NPM_ENVIRONMENT=sandbox bash scripts/deploy.sh",
+    "deploy-prod": "NPM_ENVIRONMENT=prod bash scripts/deploy.sh",
+    "ci-synth-sandbox": "NPM_ENVIRONMENT=sandbox cdk synth",
+    "ci-deploy-sandbox": "NPM_ENVIRONMENT=sandbox cdk deploy --all --require-approval never",
+    "ci-deploy-prod": "NPM_ENVIRONMENT=prod cdk deploy --all --require-approval never",
     "update-toc": "npx markdown-toc -i README.md",
     "update-dependencies": "npx -y npm-check-updates -u && npm i"
   },
