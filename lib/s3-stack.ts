@@ -3,20 +3,25 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { RemovalPolicy } from 'aws-cdk-lib';
+import { DeployEnv, envSuffix } from './deploy-env';
 
 export interface S3StackProps extends cdk.StackProps {
-
+    deployEnv: DeployEnv;
 }
 
 export class S3Stack extends cdk.Stack {
-    readonly bucketname = 'nakom.is-static';
+    readonly bucketname: string;
     readonly bucket: s3.Bucket;
     readonly executionrole: iam.Role;
-    readonly privateBucketName = 'nakom.is-private';
+    readonly privateBucketName: string;
     readonly privateBucket: s3.Bucket;
 
-    constructor(scope: Construct, id: string, props?: S3StackProps) {
+    constructor(scope: Construct, id: string, props: S3StackProps) {
         super(scope, id, props);
+
+        const suffix = envSuffix(props.deployEnv);
+        this.bucketname = `nakom.is-static${suffix}`;
+        this.privateBucketName = `nakom.is-private${suffix}`;
 
         this.bucket = new s3.Bucket(this, 'Bucket', {
             bucketName: this.bucketname,
@@ -27,15 +32,18 @@ export class S3Stack extends cdk.Stack {
             removalPolicy: RemovalPolicy.RETAIN,
         });
 
-        // Grab the nakom.is bucket to prevent cyber-squatting
-        new s3.Bucket(this, "nakom.isBucket", {
-            bucketName: 'nakom.is',
-            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-            encryption: s3.BucketEncryption.S3_MANAGED,
-            enforceSSL: true,
-            versioned: false,
-            removalPolicy: RemovalPolicy.RETAIN,
-        });
+        // Grab the nakom.is bucket to prevent cyber-squatting (prod only — sandbox.nakom.is
+        // is a subdomain so the parent domain bucket isn't needed)
+        if (props.deployEnv === 'prod') {
+            new s3.Bucket(this, "nakom.isBucket", {
+                bucketName: 'nakom.is',
+                blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+                encryption: s3.BucketEncryption.S3_MANAGED,
+                enforceSSL: true,
+                versioned: false,
+                removalPolicy: RemovalPolicy.RETAIN,
+            });
+        }
 
         // Private bucket for source documents not served publicly
         this.privateBucket = new s3.Bucket(this, 'PrivateBucket', {

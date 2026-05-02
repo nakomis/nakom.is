@@ -9,11 +9,13 @@ import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { DeployEnv, envSuffix, ssmPrefix, logPrefix, domain as envDomain } from './deploy-env';
 
 export interface ChatStackProps extends cdk.StackProps {
     sesIdentity: ses.EmailIdentity;
     sesFromAddress: string;
     privateBucket: s3.Bucket;
+    deployEnv: DeployEnv;
 }
 
 export class ChatStack extends cdk.Stack {
@@ -25,6 +27,11 @@ export class ChatStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: ChatStackProps) {
         super(scope, id, props);
 
+        const suffix = envSuffix(props.deployEnv);
+        const ssmPfx = ssmPrefix(props.deployEnv);
+        const logPfx = logPrefix(props.deployEnv);
+        const d = envDomain(props.deployEnv);
+
         // Blog bucket (separate CDK app — reference by name, no cross-stack dependency)
         const blogBucket = s3.Bucket.fromBucketName(
             this, 'BlogBucket',
@@ -33,35 +40,35 @@ export class ChatStack extends cdk.Stack {
 
         // Created by CDK; set the real value via console or CLI after first deploy
         const anthropicApiKeyParam = new ssm.StringParameter(this, 'AnthropicApiKey', {
-            parameterName: '/nakom.is/anthropic-api-key',
+            parameterName: `${ssmPfx}anthropic-api-key`,
             description: 'Anthropic API key for nakom.is chat feature',
             stringValue: 'PLACEHOLDER',
         });
 
         // Created by CDK; set the real value via console or CLI after first deploy
         const martinEmailParam = new ssm.StringParameter(this, 'MartinEmailParam', {
-            parameterName: '/nakom.is/martin-email',
+            parameterName: `${ssmPfx}martin-email`,
             description: 'Contact email address for nakom.is chat notifications',
             stringValue: 'PLACEHOLDER',
         });
 
         // DynamoDB Table for blog chunk metadata (text fetched after cosine search)
         const blogChunksTable = new dynamodb.TableV2(this, 'BlogChunks', {
-            tableName:    'blog-chunks',
+            tableName:    `blog-chunks${suffix}`,
             partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
             billing:      dynamodb.Billing.onDemand(),
         });
 
         // DynamoDB Table for rate limiting
         const rateLimitTable = new dynamodb.TableV2(this, 'ChatRateLimits', {
-            tableName: 'chat-rate-limits',
+            tableName: `chat-rate-limits${suffix}`,
             partitionKey: { name: 'date', type: dynamodb.AttributeType.STRING },
             timeToLiveAttribute: 'expiry',
         });
 
         // DynamoDB Table for CV chat request logging
         const cvChatLogsTable = new dynamodb.TableV2(this, 'CvChatLogs', {
-            tableName: 'cv-chat-logs',
+            tableName: `cv-chat-logs${suffix}`,
             partitionKey: { name: 'logType', type: dynamodb.AttributeType.STRING },
             sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
             timeToLiveAttribute: 'ttl',
@@ -70,20 +77,20 @@ export class ChatStack extends cdk.Stack {
 
         // SSM cursor for analytics import - last timestamp successfully imported to RDS analytics DB
         new ssm.StringParameter(this, 'CvChatImportCursor', {
-            parameterName: '/nakom.is/analytics/CVCHAT/last-imported-timestamp',
+            parameterName: `${ssmPfx}analytics/CVCHAT/last-imported-timestamp`,
             description: 'Timestamp of last CV chat record imported to RDS analytics DB',
             stringValue: '1970-01-01T00:00:00.000Z',
         });
 
         // Log Group
         const logGroup = new LogGroup(this, 'ChatLambdaLogs', {
-            logGroupName: '/nakom.is/lambda/chat',
+            logGroupName: `${logPfx}/lambda/chat`,
             retention: RetentionDays.SIX_MONTHS,
         });
 
         // Chat Lambda Function (esbuild bundled by CDK)
         this.chatFunction = new NodejsFunction(this, 'ChatFunction', {
-            functionName: 'nakomis-chat',
+            functionName: `nakomis-chat${suffix}`,
             entry: 'lambda/chat/handler.ts',
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,
@@ -115,17 +122,15 @@ export class ChatStack extends cdk.Stack {
         anthropicApiKeyParam.grantRead(this.chatFunction);
         martinEmailParam.grantRead(this.chatFunction);
 
-        // Grant SES send permission for the nakom.is domain identity and any
-        // individually-verified @nakom.is email addresses in this account.
-        // SES checks IAM against the most specific matching identity — if the
-        // recipient address is individually verified (e.g. aisocial@nakom.is)
-        // SES may check that identity's ARN rather than the domain ARN.
+        // Grant SES send permission for the domain identity and any individually-verified addresses.
+        // SES checks IAM against the most specific matching identity — if the recipient address is
+        // individually verified, SES may check that identity's ARN rather than the domain ARN.
         this.chatFunction.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['ses:SendEmail'],
             resources: [
                 props.sesIdentity.emailIdentityArn,
-                `arn:${this.partition}:ses:${this.region}:${this.account}:identity/*@nakom.is`,
+                `arn:${this.partition}:ses:${this.region}:${this.account}:identity/*@${d}`,
             ],
         }));
 
@@ -147,12 +152,12 @@ export class ChatStack extends cdk.Stack {
 
         // --- Streaming Chat Lambda (SSE via Function URL) ---
         const streamLogGroup = new LogGroup(this, 'StreamChatLambdaLogs', {
-            logGroupName: '/nakom.is/lambda/chat-stream',
+            logGroupName: `${logPfx}/lambda/chat-stream`,
             retention: RetentionDays.SIX_MONTHS,
         });
 
         this.streamChatFunction = new NodejsFunction(this, 'StreamChatFunction', {
-            functionName: 'nakomis-chat-stream',
+            functionName: `nakomis-chat-stream${suffix}`,
             entry: 'lambda/chat/stream-handler.ts',
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,
@@ -191,16 +196,17 @@ export class ChatStack extends cdk.Stack {
             resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0'],
         }));
 
-        // AI Notify: allow stream Lambda to publish MQTT events and read IoT endpoint from SSM.
-        // The IAM policy is created by the ai-notify CDK stack — deploy that stack first.
-        const aiNotifyPublishPolicyArn = ssm.StringParameter.valueForStringParameter(
-            this, '/AiNotify/IotPublishPolicyArn',
-        );
-        this.streamChatFunction.role?.addManagedPolicy(
-            iam.ManagedPolicy.fromManagedPolicyArn(
-                this, 'AiNotifyPublishPolicy', aiNotifyPublishPolicyArn,
-            ),
-        );
+        // AI Notify: prod-only — the ai-notify stack (and its SSM param) doesn't exist in sandbox.
+        if (props.deployEnv === 'prod') {
+            const aiNotifyPublishPolicyArn = ssm.StringParameter.valueForStringParameter(
+                this, '/AiNotify/IotPublishPolicyArn',
+            );
+            this.streamChatFunction.role?.addManagedPolicy(
+                iam.ManagedPolicy.fromManagedPolicyArn(
+                    this, 'AiNotifyPublishPolicy', aiNotifyPublishPolicyArn,
+                ),
+            );
+        }
 
         // Allow CloudFront (via OAC) to invoke the streaming function URL.
         // Both InvokeFunctionUrl AND InvokeFunction are required — without InvokeFunction,
@@ -222,7 +228,7 @@ export class ChatStack extends cdk.Stack {
         // Store the URL domain in SSM so CloudfrontStack can look it up at synth time
         // without creating a CloudFormation cross-stack export/import dependency.
         new ssm.StringParameter(this, 'StreamUrlDomainParam', {
-            parameterName: '/nakom.is/stream-url-domain',
+            parameterName: `${ssmPfx}stream-url-domain`,
             description: 'Domain of the streaming Lambda Function URL (for CloudFront origin)',
             stringValue: cdk.Fn.select(2, cdk.Fn.split('/', this.streamFunctionUrl.url)),
         });
@@ -230,12 +236,12 @@ export class ChatStack extends cdk.Stack {
         // --- Blog Search Lambda ---
         // Exposes searchBlogJson() as a public HTTP endpoint for the blog site.
         const blogSearchLogGroup = new LogGroup(this, 'BlogSearchLambdaLogs', {
-            logGroupName: '/nakom.is/lambda/blog-search',
+            logGroupName: `${logPfx}/lambda/blog-search`,
             retention: RetentionDays.SIX_MONTHS,
         });
 
         this.blogSearchFunction = new NodejsFunction(this, 'BlogSearchFunction', {
-            functionName: 'nakomis-blog-search',
+            functionName: `nakomis-blog-search${suffix}`,
             entry: 'lambda/blog-search/handler.ts',
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_20_X,

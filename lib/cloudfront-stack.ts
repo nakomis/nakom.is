@@ -7,11 +7,13 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
+import { DeployEnv, envSuffix, ssmPrefix } from './deploy-env';
 
 export interface CloudfrontStackProps extends cdk.StackProps {
     gateway: api.RestApiBase,
     certificate: cm.Certificate,
     apiKeyString: string,
+    deployEnv: DeployEnv,
     enableStreamChat?: boolean,  // set to true once ChatStack has deployed the streaming Lambda
 }
 
@@ -21,6 +23,13 @@ export class CloudfrontStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: CloudfrontStackProps) {
         super(scope, id, props);
 
+        const isProd = props!.deployEnv === 'prod';
+        const suffix = envSuffix(props!.deployEnv);
+        const ssmPfx = ssmPrefix(props!.deployEnv);
+        const primaryDomain = isProd ? 'nakom.is' : 'sandbox.nakom.is';
+        const cvDomain = isProd ? 'cv.nakomis.com' : 'cv.sandbox.nakomis.com';
+        const cvZoneDomain = isProd ? 'nakomis.com' : 'sandbox.nakomis.com';
+
         const apiOrigin = new origins.RestApiOrigin(props!.gateway, {
             originId: "NakomIsApiOrigin",
             customHeaders: {
@@ -28,14 +37,11 @@ export class CloudfrontStack extends cdk.Stack {
             }
         });
 
-        // Single viewer-request function handling all redirects:
-        // - nakomis.com / www.nakomis.com → blog.nakomis.com (preserving path, e.g. /ads.txt)
-        // - /social or /social/ → / (canonical URL)
-        // - nakom.is / → cv.nakomis.com
+        // Single viewer-request function handling all redirects.
+        // In prod: nakomis.com/www.nakomis.com → blog.nakomis.com; /social → /; nakom.is root → cv.nakomis.com
+        // In sandbox: /social → /; sandbox.nakom.is root → cv.sandbox.nakomis.com
         // CloudFront only permits one function per event type per behaviour, so all logic lives here.
-        const socialRedirectFunction = new cloudfront.Function(this, 'SocialRedirectFunction', {
-            functionName: 'nakomis-social-redirect',
-            code: cloudfront.FunctionCode.fromInline(`
+        const redirectFunctionCode = isProd ? `
 function handler(event) {
     var request = event.request;
     var uri = request.uri;
@@ -63,20 +69,36 @@ function handler(event) {
     }
     return request;
 }
-`),
+` : `
+function handler(event) {
+    var request = event.request;
+    var uri = request.uri;
+    var host = request.headers.host.value;
+    if (uri === '/social' || uri === '/social/') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: { location: { value: '/' } }
+        };
+    }
+    if (host === 'sandbox.nakom.is' && uri === '/') {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: { location: { value: 'https://cv.sandbox.nakomis.com/' } }
+        };
+    }
+    return request;
+}
+`;
+
+        const socialRedirectFunction = new cloudfront.Function(this, 'SocialRedirectFunction', {
+            functionName: `nakomis-social-redirect${suffix}`,
+            code: cloudfront.FunctionCode.fromInline(redirectFunctionCode),
             runtime: cloudfront.FunctionRuntime.JS_2_0,
         });
 
         const additionalBehaviors: Record<string, cloudfront.BehaviorOptions> = {
-            // ads.txt must be served directly (no redirect) so that Google Ads can fetch it
-            // from nakomis.com/ads.txt. Without this explicit behaviour the default behaviour's
-            // redirect function would send the request to blog.nakomis.com/ads.txt instead.
-            'ads.txt': {
-                origin: apiOrigin,
-                allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-                cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-                viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-            },
             'chat': {
                 origin: apiOrigin,
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
@@ -85,6 +107,18 @@ function handler(event) {
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             },
         };
+
+        // ads.txt must be served directly so Google Ads can fetch it from nakomis.com/ads.txt.
+        // Without this explicit behaviour the default behaviour's redirect function would send
+        // the request to blog.nakomis.com/ads.txt instead. Prod only — nakomis.com is not in sandbox.
+        if (isProd) {
+            additionalBehaviors['ads.txt'] = {
+                origin: apiOrigin,
+                allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+                viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            };
+        }
 
         // Streaming chat endpoint via Lambda Function URL (SSE support).
         // authType: AWS_IAM — CloudFront signs requests with OAC (SigV4).
@@ -95,12 +129,12 @@ function handler(event) {
             // valueFromLookup makes a real SSM API call at cdk synth time and embeds
             // the concrete domain string in the template (no CloudFormation cross-stack ref).
             const fnUrlDomain = ssm.StringParameter.valueFromLookup(
-                this, '/nakom.is/stream-url-domain'
+                this, `${ssmPfx}stream-url-domain`
             );
 
             cfnOac = new cloudfront.CfnOriginAccessControl(this, 'StreamOAC', {
                 originAccessControlConfig: {
-                    name: 'nakomis-stream-oac',
+                    name: `nakomis-stream-oac${suffix}`,
                     originAccessControlOriginType: 'lambda',
                     signingBehavior: 'always',
                     signingProtocol: 'sigv4',
@@ -124,6 +158,10 @@ function handler(event) {
             };
         }
 
+        const domainNames = isProd
+            ? [primaryDomain, 'nakomis.com', 'nakomis.co.uk', cvDomain]
+            : [primaryDomain, cvDomain];
+
         this.distrubution = new cloudfront.Distribution(this, 'NakomIsDistribution', {
             comment: 'URL Shortener',
             defaultRootObject: 'social',
@@ -139,17 +177,17 @@ function handler(event) {
                 ],
             },
             additionalBehaviors,
-            domainNames: ['nakom.is', 'nakomis.com', 'nakomis.co.uk', 'cv.nakomis.com'],
+            domainNames,
             certificate: props!.certificate,
         });
 
-        // Route53 A record for cv.nakomis.com → this CloudFront distribution
-        const nakomisComZone = route53.HostedZone.fromLookup(this, 'NakomisComZone', {
-            domainName: 'nakomis.com',
+        // Route53 A record for cv subdomain → this CloudFront distribution
+        const cvZone = route53.HostedZone.fromLookup(this, 'CvZone', {
+            domainName: cvZoneDomain,
         });
         new route53.ARecord(this, 'CvARecord', {
-            zone: nakomisComZone,
-            recordName: 'cv.nakomis.com',
+            zone: cvZone,
+            recordName: cvDomain,
             target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(this.distrubution)),
         });
 
