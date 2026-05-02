@@ -15,9 +15,11 @@ import { ChatStack } from '../lib/chat-stack';
 import { CvStack } from '../lib/cv-stack';
 import { LinkedInStack } from '../lib/linkedin-stack';
 import { PostgresQueryStack } from '../lib/postgres-query-stack';
+import { GithubCiStack } from '../lib/github-ci-stack';
 
 const app = new cdk.App();
 
+const sandboxEnv = { env: { account: '975050268859', region: 'eu-west-2' } };
 const londonEnv = { env: { account: '637423226886', region: 'eu-west-2' } };
 const nvirginiaEnv = { env: { account: '637423226886', region: 'us-east-1' } };
 
@@ -80,6 +82,17 @@ const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
 });
 // VPC-enabled Lambda for PostgreSQL queries
 const postgresQueryStack = new PostgresQueryStack(app, 'PostgresQueryStack', londonEnv);
+
+new GithubCiStack(app, 'GithubCiStackSandbox', {
+    ...sandboxEnv,
+    deployEnv: 'sandbox',
+    githubOidcProviderArn: 'arn:aws:iam::975050268859:oidc-provider/token.actions.githubusercontent.com',
+});
+new GithubCiStack(app, 'GithubCiStackProd', {
+    ...londonEnv,
+    deployEnv: 'prod',
+    githubOidcProviderArn: 'arn:aws:iam::637423226886:oidc-provider/token.actions.githubusercontent.com',
+});
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");
 const { version: infraVersion } = JSON.parse(fs.readFileSync('./version.json', 'utf-8'));
