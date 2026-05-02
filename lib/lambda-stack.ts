@@ -43,11 +43,10 @@ export class LambdaStack extends cdk.Stack {
             timeout: Duration.seconds(10),
         });
 
-        // Create an alias with provisioned concurrency to reduce cold starts
         this.redirectsFunctionAlias = new lambda.Alias(this, 'RedirectsFunctionAlias', {
             aliasName: 'live',
             version: this.redirectsFunction.currentVersion,
-            provisionedConcurrentExecutions: 1,
+            ...(props.deployEnv === 'prod' && { provisionedConcurrentExecutions: 1 }),
         });
 
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:GetItem", "dynamodb:PutItem");

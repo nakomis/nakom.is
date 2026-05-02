@@ -196,16 +196,17 @@ export class ChatStack extends cdk.Stack {
             resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0'],
         }));
 
-        // AI Notify: allow stream Lambda to publish MQTT events and read IoT endpoint from SSM.
-        // The IAM policy is created by the ai-notify CDK stack — deploy that stack first.
-        const aiNotifyPublishPolicyArn = ssm.StringParameter.valueForStringParameter(
-            this, '/AiNotify/IotPublishPolicyArn',
-        );
-        this.streamChatFunction.role?.addManagedPolicy(
-            iam.ManagedPolicy.fromManagedPolicyArn(
-                this, 'AiNotifyPublishPolicy', aiNotifyPublishPolicyArn,
-            ),
-        );
+        // AI Notify: prod-only — the ai-notify stack (and its SSM param) doesn't exist in sandbox.
+        if (props.deployEnv === 'prod') {
+            const aiNotifyPublishPolicyArn = ssm.StringParameter.valueForStringParameter(
+                this, '/AiNotify/IotPublishPolicyArn',
+            );
+            this.streamChatFunction.role?.addManagedPolicy(
+                iam.ManagedPolicy.fromManagedPolicyArn(
+                    this, 'AiNotifyPublishPolicy', aiNotifyPublishPolicyArn,
+                ),
+            );
+        }
 
         // Allow CloudFront (via OAC) to invoke the streaming function URL.
         // Both InvokeFunctionUrl AND InvokeFunction are required — without InvokeFunction,
