@@ -11,6 +11,13 @@ if [[ -z "${NPM_ENVIRONMENT:-}" ]]; then
 fi
 export NPM_ENVIRONMENT
 
+if [[ "$NPM_ENVIRONMENT" == "sandbox" ]]; then
+  AWS_PROFILE="nakom.is-sandbox"
+else
+  AWS_PROFILE="nakom.is-admin"
+fi
+export AWS_PROFILE
+
 # --- Parse flags ---
 BUMP="patch"
 for arg in "$@"; do
@@ -53,7 +60,7 @@ echo "{ \"version\": \"$RELEASE_VERSION\" }" > "$VERSION_FILE"
 # --- CDK synth (validate before committing) ---
 echo "Running cdk synth..."
 cd "$REPO_DIR"
-AWS_PROFILE=nakom.is-admin cdk synth
+cdk synth
 
 # --- Commit and tag ---
 git add "$VERSION_FILE"
@@ -62,7 +69,7 @@ git tag "infra/$RELEASE_VERSION"
 
 # --- Deploy ---
 echo "Deploying all stacks..."
-AWS_PROFILE=nakom.is-admin cdk deploy --all --require-approval never
+cdk deploy --all --require-approval never
 
 # --- Compute next SNAPSHOT ---
 case "$BUMP" in
