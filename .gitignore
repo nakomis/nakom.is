@@ -32,3 +32,6 @@ lambda/chat/node_modules
 lambda/chat/package-lock.json
 .worktrees/
 config.json
+
+# Local planning notes (gitignored)
+PLAN.md
