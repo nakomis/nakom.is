@@ -16,7 +16,9 @@
     "ci-deploy-sandbox": "NPM_ENVIRONMENT=sandbox cdk deploy --all --require-approval never",
     "ci-deploy-prod": "NPM_ENVIRONMENT=prod cdk deploy --all --require-approval never",
     "update-toc": "npx markdown-toc -i README.md",
-    "update-dependencies": "npx -y npm-check-updates -u && npm i"
+    "update-dependencies": "npx -y npm-check-updates -u && npm i",
+    "smoke": "bash scripts/smoke-test.sh --prod",
+    "smoke:sandbox": "bash scripts/smoke-test.sh --sandbox"
   },
   "devDependencies": {
     "@types/jest": "^29.5.13",
