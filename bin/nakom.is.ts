@@ -15,6 +15,7 @@ import { ChatStack } from '../lib/chat-stack';
 import { CvStack } from '../lib/cv-stack';
 import { LinkedInStack } from '../lib/linkedin-stack';
 import { DeployEnv } from '../lib/deploy-env';
+import { GithubCiStack } from '../lib/github-ci-stack';
 
 const npmEnvironment = process.env.NPM_ENVIRONMENT;
 if (!npmEnvironment) throw new Error('NPM_ENVIRONMENT is not set. Use NPM_ENVIRONMENT=sandbox|prod');
@@ -98,6 +99,12 @@ const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
 });
 // PostgresQueryStack omitted until NADM-3 (sandbox RDS) and NADM-4 (name-based lookups) are done.
 // Re-enable and parameterise as part of NAKO-32.
+
+new GithubCiStack(app, 'GithubCiStack', {
+    ...londonEnv,
+    deployEnv,
+    githubOidcProviderArn: `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+});
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");
 const { version: infraVersion } = JSON.parse(fs.readFileSync('./version.json', 'utf-8'));

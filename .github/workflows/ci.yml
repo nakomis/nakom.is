@@ -1,0 +1,235 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Check out the post-merge state on PRs so CI validates what will land on main,
+# not just the branch tip. Falls back to the commit SHA on push/workflow_dispatch.
+env:
+  CHECKOUT_REF: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/merge', github.event.pull_request.number) || github.sha }}
+
+jobs:
+  # ── Path-change detection ─────────────────────────────────────────────────────
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            infra:
+              - 'lib/**'
+              - 'bin/**'
+              - 'lambda/**'
+              - 'test/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'tsconfig.json'
+              - '.github/workflows/ci.yml'
+
+  # ── TypeScript type-check + Jest tests ───────────────────────────────────────
+  infra:
+    name: Infra (CDK / Lambda)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install lambda/chat dependencies
+        working-directory: lambda/chat
+        run: npm ci
+
+      - name: Install lambda/cv dependencies
+        working-directory: lambda/cv
+        run: npm ci
+
+      - name: Install lambda/linkedin dependencies
+        working-directory: lambda/linkedin
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+  # ── CDK synth (validates template on PRs and pushes) ─────────────────────────
+  synth-infra:
+    name: CDK synth
+    runs-on: ubuntu-latest
+    needs: [changes, infra]
+    if: |
+      (needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch') &&
+      needs.infra.result == 'success'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install lambda/chat dependencies
+        working-directory: lambda/chat
+        run: npm ci
+
+      - name: Install lambda/cv dependencies
+        working-directory: lambda/cv
+        run: npm ci
+
+      - name: Install lambda/linkedin dependencies
+        working-directory: lambda/linkedin
+        run: npm ci
+
+      - name: Configure AWS credentials (sandbox)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::975050268859:role/nakomis-nakom-is-github-ci-sandbox
+          aws-region: eu-west-2
+
+      - name: CDK synth (sandbox)
+        run: npm run ci-synth-sandbox -- --output cdk-synth.out
+
+  # ── Deploy to sandbox (auto on merge to main) ─────────────────────────────────
+  deploy-infra-sandbox:
+    name: Deploy — sandbox
+    runs-on: ubuntu-latest
+    needs: [changes, synth-infra]
+    if: |
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      (needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch') &&
+      needs.synth-infra.result == 'success'
+    environment: sandbox
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install lambda/chat dependencies
+        working-directory: lambda/chat
+        run: npm ci
+
+      - name: Install lambda/cv dependencies
+        working-directory: lambda/cv
+        run: npm ci
+
+      - name: Install lambda/linkedin dependencies
+        working-directory: lambda/linkedin
+        run: npm ci
+
+      - name: Configure AWS credentials (sandbox)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::975050268859:role/nakomis-nakom-is-github-ci-sandbox
+          aws-region: eu-west-2
+
+      - name: Deploy to sandbox
+        run: npm run ci-deploy-sandbox
+
+  # ── Deploy to prod (manual approval required) ────────────────────────────────
+  deploy-infra-prod:
+    name: Deploy — production
+    runs-on: ubuntu-latest
+    needs: [changes, deploy-infra-sandbox]
+    if: |
+      github.event_name == 'push' &&
+      needs.changes.outputs.infra == 'true' &&
+      needs.deploy-infra-sandbox.result == 'success'
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install lambda/chat dependencies
+        working-directory: lambda/chat
+        run: npm ci
+
+      - name: Install lambda/cv dependencies
+        working-directory: lambda/cv
+        run: npm ci
+
+      - name: Install lambda/linkedin dependencies
+        working-directory: lambda/linkedin
+        run: npm ci
+
+      - name: Configure AWS credentials (prod)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::637423226886:role/nakomis-nakom-is-github-ci-prod
+          aws-region: eu-west-2
+
+      - name: Deploy to production
+        run: npm run ci-deploy-prod
+
+  # ── CI Status gate (always runs, allows skipped jobs) ─────────────────────────
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [changes, infra, synth-infra]
+    if: always()
+    steps:
+      - name: Check CI results
+        run: |
+          if [[ "${{ needs.infra.result }}" == "failure" ]] || \
+             [[ "${{ needs.synth-infra.result }}" == "failure" ]]; then
+            echo "CI checks failed"
+            exit 1
+          fi
+          echo "All CI checks passed or were skipped"
