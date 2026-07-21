@@ -35,7 +35,7 @@ export class CvStack extends cdk.Stack {
             functionName: `nakomis-cv${suffix}`,
             entry: 'lambda/cv/handler.ts',
             handler: 'handler',
-            runtime: lambda.Runtime.NODEJS_20_X,
+            runtime: lambda.Runtime.NODEJS_22_X,
             memorySize: 1024,
             timeout: Duration.seconds(120),
             logGroup,

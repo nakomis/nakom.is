@@ -38,19 +38,17 @@ export class ChatStack extends cdk.Stack {
             `blog-nakom-is-${this.region}-${this.account}`
         );
 
-        // Created by CDK; set the real value via console or CLI after first deploy
-        const anthropicApiKeyParam = new ssm.StringParameter(this, 'AnthropicApiKey', {
-            parameterName: `${ssmPfx}anthropic-api-key`,
-            description: 'Anthropic API key for nakom.is chat feature',
-            stringValue: 'PLACEHOLDER',
-        });
+        // Referenced, not created: these hold real secrets set out-of-band.
+        // CDK must never own the value, or every deploy would reset it to a
+        // placeholder and break chat (see NAKO-25). For a brand-new environment,
+        // create these parameters manually before the first ChatStack deploy.
+        const anthropicApiKeyParam = ssm.StringParameter.fromStringParameterName(
+            this, 'AnthropicApiKey', `${ssmPfx}anthropic-api-key`
+        );
 
-        // Created by CDK; set the real value via console or CLI after first deploy
-        const martinEmailParam = new ssm.StringParameter(this, 'MartinEmailParam', {
-            parameterName: `${ssmPfx}martin-email`,
-            description: 'Contact email address for nakom.is chat notifications',
-            stringValue: 'PLACEHOLDER',
-        });
+        const martinEmailParam = ssm.StringParameter.fromStringParameterName(
+            this, 'MartinEmailParam', `${ssmPfx}martin-email`
+        );
 
         // DynamoDB Table for blog chunk metadata (text fetched after cosine search)
         const blogChunksTable = new dynamodb.TableV2(this, 'BlogChunks', {
@@ -93,7 +91,7 @@ export class ChatStack extends cdk.Stack {
             functionName: `nakomis-chat${suffix}`,
             entry: 'lambda/chat/handler.ts',
             handler: 'handler',
-            runtime: lambda.Runtime.NODEJS_20_X,
+            runtime: lambda.Runtime.NODEJS_22_X,
             memorySize: 256,
             timeout: Duration.seconds(30),
             logGroup: logGroup,
@@ -160,7 +158,7 @@ export class ChatStack extends cdk.Stack {
             functionName: `nakomis-chat-stream${suffix}`,
             entry: 'lambda/chat/stream-handler.ts',
             handler: 'handler',
-            runtime: lambda.Runtime.NODEJS_20_X,
+            runtime: lambda.Runtime.NODEJS_22_X,
             memorySize: 256,
             timeout: Duration.seconds(60),
             logGroup: streamLogGroup,
@@ -244,7 +242,7 @@ export class ChatStack extends cdk.Stack {
             functionName: `nakomis-blog-search${suffix}`,
             entry: 'lambda/blog-search/handler.ts',
             handler: 'handler',
-            runtime: lambda.Runtime.NODEJS_20_X,
+            runtime: lambda.Runtime.NODEJS_22_X,
             memorySize: 256,
             timeout: Duration.seconds(30),
             logGroup: blogSearchLogGroup,
