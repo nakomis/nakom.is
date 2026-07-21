@@ -104,6 +104,11 @@ export class ChatStack extends cdk.Stack {
                 BLOG_BUCKET: blogBucket.bucketName,
                 CV_CHAT_LOGS_TABLE: cvChatLogsTable.tableName,
                 BLOG_CHUNKS_TABLE: blogChunksTable.tableName,
+                // SSM paths are environment-prefixed (/nakom.is/ vs /nakom.is/sandbox/).
+                // The handlers previously hardcoded the prod paths, so sandbox read a
+                // parameter it has no grant for and every chat request failed.
+                ANTHROPIC_API_KEY_PARAM: anthropicApiKeyParam.parameterName,
+                MARTIN_EMAIL_PARAM: martinEmailParam.parameterName,
             },
             bundling: {
                 minify: true,
@@ -170,6 +175,8 @@ export class ChatStack extends cdk.Stack {
                 BLOG_BUCKET: blogBucket.bucketName,
                 CV_CHAT_LOGS_TABLE: cvChatLogsTable.tableName,
                 BLOG_CHUNKS_TABLE: blogChunksTable.tableName,
+                // See the note on the chat function: the prod SSM path was hardcoded.
+                ANTHROPIC_API_KEY_PARAM: anthropicApiKeyParam.parameterName,
             },
             bundling: {
                 minify: true,

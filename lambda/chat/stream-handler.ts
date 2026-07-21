@@ -47,7 +47,7 @@ async function getModel(): Promise<ChatAnthropic> {
   if (cachedModel) return cachedModel;
 
   const result = await ssmClient.send(new GetParameterCommand({
-    Name: '/nakom.is/anthropic-api-key',
+    Name: process.env.ANTHROPIC_API_KEY_PARAM ?? '/nakom.is/anthropic-api-key',
     WithDecryption: true,
   }));
 

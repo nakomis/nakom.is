@@ -47,7 +47,7 @@ async function getModel(): Promise<ChatAnthropic> {
   if (cachedModel) return cachedModel;
 
   const result = await ssmClient.send(new GetParameterCommand({
-    Name: '/nakom.is/anthropic-api-key',
+    Name: process.env.ANTHROPIC_API_KEY_PARAM ?? '/nakom.is/anthropic-api-key',
     WithDecryption: true,
   }));
 
@@ -65,7 +65,7 @@ async function getModel(): Promise<ChatAnthropic> {
 async function getMartinEmail(): Promise<string> {
   if (cachedMartinEmail) return cachedMartinEmail;
   const result = await ssmClient.send(new GetParameterCommand({
-    Name: '/nakom.is/martin-email',
+    Name: process.env.MARTIN_EMAIL_PARAM ?? '/nakom.is/martin-email',
   }));
   cachedMartinEmail = result.Parameter!.Value!;
   return cachedMartinEmail;
