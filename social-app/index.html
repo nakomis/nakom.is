@@ -3,7 +3,25 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Social Media Links</title>
+    <title>Martin Harris | Backend Engineer</title>
+    <!--
+        These tags are what link previews render (LinkedIn, Slack, WhatsApp, etc).
+        This is a client-rendered SPA, so crawlers never execute the bundle and see
+        only what is in this static shell. Without them a shared link shows a bare
+        card titled "Social Media Links" with no description.
+
+        og:url is deliberately omitted: this app is served from more than one
+        hostname, so declaring a single canonical URL would rewrite previews of
+        whichever host was actually shared.
+    -->
+    <meta name="description" content="Martin Harris, backend engineer. Profile, CV, GitHub projects, and an AI chat powered by Claude." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="nakom.is" />
+    <meta property="og:title" content="Martin Harris | Backend Engineer" />
+    <meta property="og:description" content="Profile, CV, GitHub projects, and an AI chat powered by Claude." />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Martin Harris | Backend Engineer" />
+    <meta name="twitter:description" content="Profile, CV, GitHub projects, and an AI chat powered by Claude." />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1712135199843745"
