@@ -1,4 +1,11 @@
+import os
+
 import boto3
+
+# The DynamoDB table is environment-suffixed by CDK (redirects / redirects-sandbox),
+# so the name is injected rather than hardcoded. The default keeps the handler
+# working if it is ever invoked outside the CDK-managed environment.
+TABLE_NAME = os.environ.get('REDIRECTS_TABLE', 'redirects')
 
 def lambda_handler(event, context):
     if 'pathParameters' not in event.keys():
@@ -15,13 +22,13 @@ def lambda_handler(event, context):
         return cat(path)
 
     client = boto3.client('dynamodb')
-    dbdata = client.get_item(TableName='redirects', Key={'shortPath': {'S': path}})
+    dbdata = client.get_item(TableName=TABLE_NAME, Key={'shortPath': {'S': path}})
     
     if 'Item' in dbdata.keys():
         url = dbdata["Item"]["url"]["S"]
         hitcount = int(dbdata["Item"]["hitCount"]["N"])
         hitcount = hitcount + 1
-        client.put_item(TableName='redirects', Item={'shortPath': {'S': path}, 'hitCount': {'N': str(hitcount)}, 'url': {'S': url}})
+        client.put_item(TableName=TABLE_NAME, Item={'shortPath': {'S': path}, 'hitCount': {'N': str(hitcount)}, 'url': {'S': url}})
         if not url.startswith('http') and not url.startswith('chrome://'):
             url = "https://" + url
         print("Redirecting: " + path)
