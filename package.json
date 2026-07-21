@@ -31,7 +31,6 @@
   },
   "dependencies": {
     "3": "^2.1.0",
-    "@aws-cdk/assets": "^1.19.0",
     "@aws-cdk/region-info": "^2.261.0",
     "aws-sdk": "^2.1691.0",
     "constructs": "^10.3.0",
