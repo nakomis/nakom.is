@@ -41,6 +41,13 @@ export class LambdaStack extends cdk.Stack {
             handler: 'urlshortener.lambda_handler',
             logGroup: logGroup,
             timeout: Duration.seconds(10),
+            environment: {
+                // The table name is environment-suffixed, so the function must be
+                // told which one to use. Hardcoding 'redirects' in the handler meant
+                // sandbox looked up the prod table name, which its role has no grant
+                // for, so every /<path> lookup returned 502.
+                REDIRECTS_TABLE: this.redirectTable.tableName,
+            },
         });
 
         this.redirectsFunctionAlias = new lambda.Alias(this, 'RedirectsFunctionAlias', {
