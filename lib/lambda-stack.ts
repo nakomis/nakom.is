@@ -37,7 +37,11 @@ export class LambdaStack extends cdk.Stack {
         this.redirectsFunction = new lambda.Function(this, 'RedirectsFunction', {
             functionName: `urlShortener${suffix}`,
             runtime: lambda.Runtime.PYTHON_3_12,
-            code: lambda.Code.fromAsset('lambda'),
+            // Scope the asset to just this function's own directory. It used to
+            // bundle the whole `lambda/` tree — which meant zipping every sibling
+            // lambda's node_modules into this 2 KB Python function, and eventually
+            // blew past Lambda's 250 MiB unzipped limit as those deps grew.
+            code: lambda.Code.fromAsset('lambda/urlshortener'),
             handler: 'urlshortener.lambda_handler',
             logGroup: logGroup,
             timeout: Duration.seconds(10),
