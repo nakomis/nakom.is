@@ -87,6 +87,24 @@ export class ChatStack extends cdk.Stack {
         });
 
         // Chat Lambda Function (esbuild bundled by CDK)
+        // Bedrock models both chat Lambdas invoke (us-east-1): Titan for the
+        // query embedding (blog search + on-topic gate Tier 1) and Nova Micro for
+        // the on-topic gate's Tier-2 resolver (NAKO-34).
+        const bedrockModelArns = [
+            'arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0',
+            'arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-micro-v1:0',
+        ];
+
+        // On-topic gate config (NAKO-34), set explicitly so the threshold and
+        // resolver model are tunable from the Lambda console without a redeploy.
+        // All have code defaults (see relevance.ts / judge-config.ts).
+        const relevanceEnv: Record<string, string> = {
+            RELEVANCE_THRESHOLD: '0.22',
+            JUDGE_MODEL_ID: 'amazon.nova-micro-v1:0',
+            JUDGE_MSG_MAXCHARS: '500',
+            RELEVANCE_LOG_VERBOSE: '0',
+        };
+
         this.chatFunction = new NodejsFunction(this, 'ChatFunction', {
             functionName: `nakomis-chat${suffix}`,
             entry: 'lambda/chat/handler.ts',
@@ -109,6 +127,7 @@ export class ChatStack extends cdk.Stack {
                 // parameter it has no grant for and every chat request failed.
                 ANTHROPIC_API_KEY_PARAM: anthropicApiKeyParam.parameterName,
                 MARTIN_EMAIL_PARAM: martinEmailParam.parameterName,
+                ...relevanceEnv,
             },
             bundling: {
                 minify: true,
@@ -146,11 +165,12 @@ export class ChatStack extends cdk.Stack {
         // Grant read access to blog bucket for blog posts
         blogBucket.grantRead(this.chatFunction, 'posts/*');
 
-        // Grant Bedrock InvokeModel for Titan Embed (query-time embedding)
+        // Grant Bedrock InvokeModel for Titan Embed (query-time embedding + gate
+        // Tier 1) and Nova Micro (on-topic gate Tier-2 resolver, NAKO-34)
         this.chatFunction.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['bedrock:InvokeModel'],
-            resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0'],
+            resources: bedrockModelArns,
         }));
 
         // --- Streaming Chat Lambda (SSE via Function URL) ---
@@ -177,6 +197,7 @@ export class ChatStack extends cdk.Stack {
                 BLOG_CHUNKS_TABLE: blogChunksTable.tableName,
                 // See the note on the chat function: the prod SSM path was hardcoded.
                 ANTHROPIC_API_KEY_PARAM: anthropicApiKeyParam.parameterName,
+                ...relevanceEnv,
             },
             bundling: {
                 minify: true,
@@ -198,7 +219,7 @@ export class ChatStack extends cdk.Stack {
         this.streamChatFunction.addToRolePolicy(new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             actions: ['bedrock:InvokeModel'],
-            resources: ['arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0'],
+            resources: bedrockModelArns,
         }));
 
         // AI Notify: prod-only — the ai-notify stack (and its SSM param) doesn't exist in sandbox.
