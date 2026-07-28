@@ -8,6 +8,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
+    "gen:topic-vectors": "ts-node --transpile-only lambda/chat/scripts/generate-topic-vectors.ts",
     "cdk": "cdk",
     "deploy": "bash scripts/deploy.sh",
     "deploy-sandbox": "NPM_ENVIRONMENT=sandbox bash scripts/deploy.sh",
