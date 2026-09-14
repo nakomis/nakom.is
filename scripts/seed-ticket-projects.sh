@@ -3,7 +3,8 @@
 # Existing rows are left alone, so edits made in the console survive a re-run.
 set -euo pipefail
 
-PROFILE="${AWS_PROFILE:-nakom.is-admin}"
+# Deliberately not inherited from AWS_PROFILE, which may point at another account
+PROFILE="nakom.is-admin"
 REGION="eu-west-2"
 TABLE="ticket-projects"
 TAIGA="https://taiga.home.nakomis.com/project"

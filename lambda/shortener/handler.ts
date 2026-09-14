@@ -19,8 +19,17 @@ const resolvers: AnyResolver[] = [
     googleResolver,
 ];
 
+// API Gateway hands over proxy path parameters still percent-encoded
+function decodePath(raw: string): string {
+    try {
+        return decodeURIComponent(raw);
+    } catch {
+        return raw;
+    }
+}
+
 export async function handle(event: ShortenerEvent, chain: AnyResolver[]): Promise<RedirectResponse> {
-    const path = event.pathParameters?.shortPath ?? '';
+    const path = decodePath(event.pathParameters?.shortPath ?? '');
     return runChain(path, chain);
 }
 

@@ -57,7 +57,7 @@ describe('taiga resolver', () => {
         const { result } = resolve('taiga/nope 123');
         await expect(result).resolves.toEqual({
             statusCode: 301,
-            headers: { Location: 'https://www.google.co.uk/search?q=nope%20123' },
+            headers: { Location: 'https://www.google.co.uk/search?q=nope%20123', 'Cache-Control': 'no-store' },
         });
     });
 
