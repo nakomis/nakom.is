@@ -14,6 +14,7 @@ export class LambdaStack extends cdk.Stack {
     readonly redirectsFunction: lambda.Function;
     readonly redirectsFunctionAlias: lambda.Alias;
     readonly redirectTable: dynamodb.TableV2;
+    readonly ticketProjectsTable: dynamodb.TableV2;
 
     constructor(scope: Construct, id: string, props?: LambdaStackProps) {
         super(scope, id, props);
@@ -22,6 +23,13 @@ export class LambdaStack extends cdk.Stack {
         this.redirectTable = new dynamodb.TableV2(this, 'redirects', {
             tableName: 'redirects',
             partitionKey: { name: 'shortPath', type: dynamodb.AttributeType.STRING },
+        });
+
+        // Maps a ticket project alias (e.g. "home") to a URL template containing {ref}.
+        // Rows are data, not infrastructure: edit them in the console or CLI, no deploy needed.
+        this.ticketProjectsTable = new dynamodb.TableV2(this, 'TicketProjects', {
+            tableName: 'ticket-projects',
+            partitionKey: { name: 'alias', type: dynamodb.AttributeType.STRING },
         });
 
         // Create a CloudWatch Log Group for storing access logs
@@ -37,10 +45,12 @@ export class LambdaStack extends cdk.Stack {
             entry: 'lambda/shortener/handler.ts',
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_24_X,
+            memorySize: 256,
             logGroup: logGroup,
             timeout: Duration.seconds(10),
             environment: {
                 REDIRECTS_TABLE: this.redirectTable.tableName,
+                TICKET_PROJECTS_TABLE: this.ticketProjectsTable.tableName,
             },
             bundling: {
                 minify: true,
@@ -56,6 +66,7 @@ export class LambdaStack extends cdk.Stack {
         });
 
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:UpdateItem");
+        this.ticketProjectsTable.grant(this.redirectsFunction, "dynamodb:GetItem");
     }
 
     getLambda(): lambda.Function {
