@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Duration } from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 
@@ -30,13 +31,21 @@ export class LambdaStack extends cdk.Stack {
         });
 
         // Lambda Function
-        this.redirectsFunction = new lambda.Function(this, 'RedirectsFunction', {
+        // Lambda Function (esbuild bundled by CDK)
+        this.redirectsFunction = new NodejsFunction(this, 'RedirectsFunction', {
             functionName: 'urlShortener',
-            runtime: lambda.Runtime.PYTHON_3_12,
-            code: lambda.Code.fromAsset('lambda'),
-            handler: 'urlshortener.lambda_handler',
+            entry: 'lambda/shortener/handler.ts',
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_24_X,
             logGroup: logGroup,
             timeout: Duration.seconds(10),
+            environment: {
+                REDIRECTS_TABLE: this.redirectTable.tableName,
+            },
+            bundling: {
+                minify: true,
+                sourceMap: true,
+            },
         });
 
         // Create an alias with provisioned concurrency to reduce cold starts
@@ -46,7 +55,7 @@ export class LambdaStack extends cdk.Stack {
             provisionedConcurrentExecutions: 1,
         });
 
-        this.redirectTable.grant(this.redirectsFunction, "dynamodb:GetItem", "dynamodb:PutItem");
+        this.redirectTable.grant(this.redirectsFunction, "dynamodb:UpdateItem");
     }
 
     getLambda(): lambda.Function {

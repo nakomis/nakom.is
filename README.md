@@ -70,9 +70,13 @@ I've also setup a */static/filename.xyz* path, which returns files from the S3 b
 
 The [Lambda](lib/lambda-stack.ts) stack creates the Lambda function which is the heart of the redirection, along with a DynamoDB database used to store the redirects. 
 
-The lambda is a simple [python script](lambda/urlshortener.py) which extracts the desired short URL from the path, looks up the record in a DynamoDB database and constructs the appropriate *301* redirect.
+The lambda is a [TypeScript handler](lambda/shortener/handler.ts) that passes the path through an ordered chain of resolvers. The first resolver whose `match` accepts the path produces the redirect:
 
-If the short path is not found, the lambda redirects the user to Google with the short URL as a query. If the short path is found in the database, a simple hit counter is incremented, and the value written back to the database before returning the redirect. A race condition exists where a second user can read the value from the database before the first has been written back, but given the use-case I decided not to bother with conditional writes.
+1. **cat**: `cat404` redirects to [http.cat](https://http.cat/status/404)
+2. **short link**: looks the path up in the DynamoDB `redirects` table, atomically increments its hit counter and returns a *301*
+3. **Google**: anything else redirects to a Google search for the path
+
+`match` is pure and synchronous, so only the winning resolver does any I/O. A resolver may decline after doing its lookup (as the short-link resolver does for unknown paths), in which case the chain carries on. Resolvers that own a namespace match a `word/` prefix (e.g. `imdb/`), and short links never contain a `/`, so the two can't collide.
 
 There's also an exception for short URLs beginning with the literal *cat*, which redirects to a [HTTP Status Code lookup page](https://http.cat), e.g. https://nakom.is/cat418 will redirect to https://http.cat/status/418
 
