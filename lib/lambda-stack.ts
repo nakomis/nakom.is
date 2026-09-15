@@ -15,6 +15,7 @@ export class LambdaStack extends cdk.Stack {
     readonly redirectsFunction: lambda.Function;
     readonly redirectsFunctionAlias: lambda.Alias;
     readonly redirectTable: dynamodb.TableV2;
+    readonly ticketProjectsTable: dynamodb.TableV2;
 
     constructor(scope: Construct, id: string, props: LambdaStackProps) {
         super(scope, id, props);
@@ -28,13 +29,19 @@ export class LambdaStack extends cdk.Stack {
             partitionKey: { name: 'shortPath', type: dynamodb.AttributeType.STRING },
         });
 
+        // Maps a ticket project alias (e.g. "home") to a URL template containing {ref}.
+        // Rows are data, not infrastructure: edit them in the console or CLI, no deploy needed.
+        this.ticketProjectsTable = new dynamodb.TableV2(this, 'TicketProjects', {
+            tableName: `ticket-projects${suffix}`,
+            partitionKey: { name: 'alias', type: dynamodb.AttributeType.STRING },
+        });
+
         // Create a CloudWatch Log Group for storing access logs
         const logGroup = new LogGroup(this, 'LambdaAccessLogs', {
             logGroupName: `${logPfx}/lambda/urlShortener`,
             retention: RetentionDays.SIX_MONTHS,
         });
 
-        // Lambda Function
         // Lambda Function (esbuild bundled by CDK). NodejsFunction bundles only
         // this handler's own entry point, so the asset stays small.
         this.redirectsFunction = new NodejsFunction(this, 'RedirectsFunction', {
@@ -49,6 +56,7 @@ export class LambdaStack extends cdk.Stack {
                 // Table names are environment-suffixed, so the function must be told
                 // which ones to use rather than hardcoding the production names.
                 REDIRECTS_TABLE: this.redirectTable.tableName,
+                TICKET_PROJECTS_TABLE: this.ticketProjectsTable.tableName,
             },
             bundling: {
                 minify: true,
@@ -63,6 +71,7 @@ export class LambdaStack extends cdk.Stack {
         });
 
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:UpdateItem");
+        this.ticketProjectsTable.grant(this.redirectsFunction, "dynamodb:GetItem");
     }
 
     getLambda(): lambda.Function {

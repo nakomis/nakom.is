@@ -73,8 +73,9 @@ The [Lambda](lib/lambda-stack.ts) stack creates the Lambda function which is the
 The lambda is a [TypeScript handler](lambda/shortener/handler.ts) that passes the path through an ordered chain of resolvers. The first resolver whose `match` accepts the path produces the redirect:
 
 1. **cat**: `cat404` redirects to [http.cat](https://http.cat/status/404)
-2. **short link**: looks the path up in the DynamoDB `redirects` table, atomically increments its hit counter and returns a *301*
-3. **Google**: anything else redirects to a Google search for the path
+2. **taiga**: `taiga/home 123` looks up the alias `home` in the `ticket-projects` table and fills `{ref}` in its `urlTemplate`, returning an uncached *302*. Unknown aliases or malformed input go to a Google search. Seed the table with [scripts/seed-ticket-projects.sh](scripts/seed-ticket-projects.sh). With a Chrome site search of keyword `t` → `https://nakom.is/taiga/%s`, typing `t home 123` opens user story 123
+3. **short link**: looks the path up in the DynamoDB `redirects` table, atomically increments its hit counter and returns a *301*
+4. **Google**: anything else redirects to a Google search for the path
 
 `match` is pure and synchronous, so only the winning resolver does any I/O. A resolver may decline after doing its lookup (as the short-link resolver does for unknown paths), in which case the chain carries on. Resolvers that own a namespace match a `word/` prefix (e.g. `imdb/`), and short links never contain a `/`, so the two can't collide.
 
