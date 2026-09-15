@@ -57,8 +57,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '25'
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
+          # No dependency cache: with the privileged checkout of a PR's merge ref
+          # (CHECKOUT_REF), a cache written here could be poisoned and then restored
+          # by default-branch runs. See CodeQL actions/cache-poisoning/poisonable-step.
 
       - name: Install root dependencies
         run: npm ci
@@ -107,8 +108,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '25'
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
+          # No dependency cache: with the privileged checkout of a PR's merge ref
+          # (CHECKOUT_REF), a cache written here could be poisoned and then restored
+          # by default-branch runs. See CodeQL actions/cache-poisoning/poisonable-step.
 
       - name: Install root dependencies
         run: npm ci
@@ -165,8 +167,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '25'
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
+          # No dependency cache: with the privileged checkout of a PR's merge ref
+          # (CHECKOUT_REF), a cache written here could be poisoned and then restored
+          # by default-branch runs. See CodeQL actions/cache-poisoning/poisonable-step.
 
       - name: Install root dependencies
         run: npm ci
@@ -223,8 +226,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '25'
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
+          # No dependency cache: with the privileged checkout of a PR's merge ref
+          # (CHECKOUT_REF), a cache written here could be poisoned and then restored
+          # by default-branch runs. See CodeQL actions/cache-poisoning/poisonable-step.
 
       - name: Install root dependencies
         run: npm ci
