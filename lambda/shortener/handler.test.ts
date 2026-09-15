@@ -90,7 +90,23 @@ describe('shortener handler', () => {
         const { chain } = chainWith({});
         await expect(handle(at('nothing here'), chain)).resolves.toEqual({
             statusCode: 301,
-            headers: { Location: 'https://www.google.co.uk/search?q=nothing%20here' },
+            headers: { Location: 'https://www.google.co.uk/search?q=nothing%20here', 'Cache-Control': 'no-store' },
+        });
+    });
+
+    test('percent-encoded paths from API Gateway are decoded once', async () => {
+        const { chain, commands } = chainWith({ 'a b': 'example.com' });
+        await expect(handle(at('a%20b'), chain)).resolves.toMatchObject({ headers: { Location: 'https://example.com' } });
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'a b' } });
+        await expect(handle(at('taiga/home%20%23123'), [googleResolver])).resolves.toMatchObject({
+            headers: { Location: 'https://www.google.co.uk/search?q=taiga%2Fhome%20%23123' },
+        });
+    });
+
+    test('malformed percent-encoding is used as-is', async () => {
+        const { chain } = chainWith({});
+        await expect(handle(at('100%'), chain)).resolves.toMatchObject({
+            headers: { Location: 'https://www.google.co.uk/search?q=100%25' },
         });
     });
 

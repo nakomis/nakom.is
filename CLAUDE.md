@@ -58,6 +58,7 @@ AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
 
 - `match()` must be pure and synchronous. Only the winning resolver does I/O; `resolve()` may return `null` to decline and let the chain continue.
 - Resolvers that own a namespace match a `word/` prefix (e.g. `taiga/`, `imdb/`). Short links in the `redirects` table must never contain a `/`, so the two can't collide.
+- `taiga/<alias> <ref>` uses the `ticket-projects` table (`alias` → `urlTemplate` with `{ref}`). The rows are data: edit them directly rather than redeploying. When Taiga is replaced by Plane, update the templates.
 
 ## Blog RAG search
 
