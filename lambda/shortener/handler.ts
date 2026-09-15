@@ -3,7 +3,7 @@ import { AnyResolver, RedirectResponse, runChain } from './resolver';
 import { catResolver } from './resolvers/cat';
 import { googleResolver } from './resolvers/google';
 import { shortLinkResolver } from './resolvers/short-link';
-import { taigaResolver } from './resolvers/taiga';
+import { ticketResolver } from './resolvers/tickets';
 
 export interface ShortenerEvent {
     pathParameters?: { shortPath?: string } | null;
@@ -14,7 +14,7 @@ const client = new DynamoDBClient({});
 // Order matters: first match wins, Google is always last.
 const resolvers: AnyResolver[] = [
     catResolver,
-    taigaResolver(client, process.env.TICKET_PROJECTS_TABLE ?? 'ticket-projects'),
+    ticketResolver(client, process.env.TICKET_PROJECTS_TABLE ?? 'ticket-projects'),
     shortLinkResolver(client, process.env.REDIRECTS_TABLE ?? 'redirects'),
     googleResolver,
 ];

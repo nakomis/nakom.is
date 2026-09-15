@@ -73,7 +73,7 @@ The [Lambda](lib/lambda-stack.ts) stack creates the Lambda function which is the
 The lambda is a [TypeScript handler](lambda/shortener/handler.ts) that passes the path through an ordered chain of resolvers. The first resolver whose `match` accepts the path produces the redirect:
 
 1. **cat**: `cat404` redirects to [http.cat](https://http.cat/status/404)
-2. **taiga**: `taiga/home 123` looks up the alias `home` in the `ticket-projects` table and fills `{ref}` in its `urlTemplate`, returning an uncached *302*. Unknown aliases or malformed input go to a Google search. Seed the table with [scripts/seed-ticket-projects.sh](scripts/seed-ticket-projects.sh). With a Chrome site search of keyword `t` → `https://nakom.is/taiga/%s`, typing `t home 123` opens user story 123
+2. **tickets**: `plane/home 123` (or `plane/HOME-123`) looks up the alias `home` in the `ticket-projects` table and fills `{ref}` in its `urlTemplate`, returning an uncached *302* to the Plane work item. `taiga/` still works as a legacy prefix. Unknown aliases or malformed input go to a Google search. Every Plane project answers to its lowercased identifier; seed or refresh the table with [scripts/seed-ticket-projects.sh](scripts/seed-ticket-projects.sh). With a Chrome site search of keyword `p` → `https://nakom.is/plane/%s`, typing `p home 123` opens HOME-123
 3. **short link**: looks the path up in the DynamoDB `redirects` table, atomically increments its hit counter and returns a *301*
 4. **Google**: anything else redirects to a Google search for the path
 
