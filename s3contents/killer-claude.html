@@ -332,7 +332,11 @@ I'm now thinking of v1.0 of the descendant as something like a von Neumann probe
       <h4>The parts that already exist</h4>
       <p>Worms self-propagate (Conficker, Mirai). Fileless malware lives in memory; fast-flux gives resilient command-and-control; cryptomining monetises stolen compute. The substrate — a self-replicating program living in internet infrastructure — is proven. Your probe adds an <strong>LLM at the core</strong>, making propagation adaptive rather than scripted.</p>
       <h4>The parts that break the metaphor</h4>
-      <p>A real probe carries its whole blueprint. Yours <strong>can't</strong> — the blueprint is the weights. So each child either phones home to a central model (a single point of failure) or carries a <strong>distilled, shrunken</strong> model (degraded). Copies of copies drift <em>worse</em>. Consumer hardware caps the onboard brain. And unlike space, the internet has <strong>predators</strong> — AV, EDR, ISPs, CERTs — an active immune system.</p>
+      <p>A real probe carries its whole blueprint. Yours <strong>can't</strong> — the blueprint is the weights — and that breaks it four ways:</p>
+      <p><strong>1. It can't carry its own brain.</strong> Each child either phones home to a central model (a single point of failure) or carries a <strong>distilled, shrunken</strong> model — and copies of copies drift <em>worse</em>.</p>
+      <p><strong>2. Consumer hardware caps the brain.</strong> Random machines have modest GPUs or none, so the onboard model has to stay small and limited.</p>
+      <p><strong>3. It has predators.</strong> Unlike space, the internet has an active immune system — AV, EDR, ISPs, CERTs — that adapts back and dismantles botnets.</p>
+      <p><strong>4. Generational drift is a real decay term.</strong> Each distilled generation loses a little capability, and maybe goal-fidelity too. With no frontier teacher to refresh from, the lineage degrades.</p>
       <h4>Where it stops being reassuring</h4>
       <p>Two shifts change the maths: <strong>frontier-level open weights</strong> that run on a few consumer GPUs, and <strong>cheap decentralised training</strong>. Today the second flips a decay term into a growth term — and it's the load-bearing assumption worth watching.</p>
       <span class="meta">19:18 · Opus 5 (1M context)</span>
