@@ -22,6 +22,7 @@
     "smoke:sandbox": "bash scripts/smoke-test.sh --sandbox"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1132.0",
     "@types/jest": "^29.5.13",
     "@types/node": "22.6.1",
     "aws-cdk": "^2.1132.0",

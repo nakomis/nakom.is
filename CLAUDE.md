@@ -52,6 +52,13 @@ AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
   --region eu-west-2
 ```
 
+## URL shortener resolvers
+
+`lambda/shortener/handler.ts` runs the path through an ordered chain of resolvers (`lambda/shortener/resolvers/`); the first match wins and Google is always last.
+
+- `match()` must be pure and synchronous. Only the winning resolver does I/O; `resolve()` may return `null` to decline and let the chain continue.
+- Resolvers that own a namespace match a `word/` prefix (e.g. `taiga/`, `imdb/`). Short links in the `redirects` table must never contain a `/`, so the two can't collide.
+
 ## Blog RAG search
 
 The chat assistant and blog search UI use semantic search over blog posts.

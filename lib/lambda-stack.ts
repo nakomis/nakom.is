@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Duration } from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 import { DeployEnv, envSuffix, logPrefix } from './deploy-env';
@@ -34,23 +35,24 @@ export class LambdaStack extends cdk.Stack {
         });
 
         // Lambda Function
-        this.redirectsFunction = new lambda.Function(this, 'RedirectsFunction', {
+        // Lambda Function (esbuild bundled by CDK). NodejsFunction bundles only
+        // this handler's own entry point, so the asset stays small.
+        this.redirectsFunction = new NodejsFunction(this, 'RedirectsFunction', {
             functionName: `urlShortener${suffix}`,
-            runtime: lambda.Runtime.PYTHON_3_12,
-            // Scope the asset to just this function's own directory. It used to
-            // bundle the whole `lambda/` tree — which meant zipping every sibling
-            // lambda's node_modules into this 2 KB Python function, and eventually
-            // blew past Lambda's 250 MiB unzipped limit as those deps grew.
-            code: lambda.Code.fromAsset('lambda/urlshortener'),
-            handler: 'urlshortener.lambda_handler',
+            entry: 'lambda/shortener/handler.ts',
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_24_X,
+            memorySize: 256,
             logGroup: logGroup,
             timeout: Duration.seconds(10),
             environment: {
-                // The table name is environment-suffixed, so the function must be
-                // told which one to use. Hardcoding 'redirects' in the handler meant
-                // sandbox looked up the prod table name, which its role has no grant
-                // for, so every /<path> lookup returned 502.
+                // Table names are environment-suffixed, so the function must be told
+                // which ones to use rather than hardcoding the production names.
                 REDIRECTS_TABLE: this.redirectTable.tableName,
+            },
+            bundling: {
+                minify: true,
+                sourceMap: true,
             },
         });
 
@@ -60,7 +62,7 @@ export class LambdaStack extends cdk.Stack {
             provisionedConcurrentExecutions: 1,
         });
 
-        this.redirectTable.grant(this.redirectsFunction, "dynamodb:GetItem", "dynamodb:PutItem");
+        this.redirectTable.grant(this.redirectsFunction, "dynamodb:UpdateItem");
     }
 
     getLambda(): lambda.Function {
