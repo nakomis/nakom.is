@@ -12,6 +12,7 @@ import { fetchGitHubRepos } from './github';
 import { buildSystemPrompt } from './system-prompt';
 import { TOOLS } from './tools';
 import { buildLogEntry, writeLogEntry } from './chat-logger';
+import { runOnTopicGate } from './relevance/gate';
 
 class LoggingCallbackHandler extends BaseCallbackHandler {
   name = 'LoggingCallbackHandler';
@@ -47,7 +48,7 @@ async function getModel(): Promise<ChatAnthropic> {
   if (cachedModel) return cachedModel;
 
   const result = await ssmClient.send(new GetParameterCommand({
-    Name: '/nakom.is/anthropic-api-key',
+    Name: process.env.ANTHROPIC_API_KEY_PARAM ?? '/nakom.is/anthropic-api-key',
     WithDecryption: true,
   }));
 
@@ -65,7 +66,7 @@ async function getModel(): Promise<ChatAnthropic> {
 async function getMartinEmail(): Promise<string> {
   if (cachedMartinEmail) return cachedMartinEmail;
   const result = await ssmClient.send(new GetParameterCommand({
-    Name: '/nakom.is/martin-email',
+    Name: process.env.MARTIN_EMAIL_PARAM ?? '/nakom.is/martin-email',
   }));
   cachedMartinEmail = result.Parameter!.Value!;
   return cachedMartinEmail;
@@ -193,6 +194,14 @@ export const handler = async (event: {
     }
 
     // --- Normal chat path (LangChain tool-calling agent) ---
+    // On-topic gate (NAKO-34): screen the latest message before the expensive
+    // tool-calling loop. Placed AFTER the email-submission path above, so leaving
+    // contact details / a job offer is never gated. Fails open on any error.
+    const gate = await runOnTopicGate(messages);
+    if (gate.block) {
+      return { statusCode: 200, headers, body: JSON.stringify({ message: gate.message, remaining }) };
+    }
+
     console.log('Normal chat path - building agent...');
     const githubUser = process.env.GITHUB_USER || 'nakomis';
     const repos = await fetchGitHubRepos(githubUser);

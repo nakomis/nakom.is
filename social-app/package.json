@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:sandbox": "bash scripts/deploy.sh --sandbox"
   },
   "dependencies": {
     "dompurify": "^3.3.1",

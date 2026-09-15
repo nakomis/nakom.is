@@ -12,6 +12,7 @@ import { buildSystemPrompt } from './system-prompt';
 import { TOOLS } from './tools';
 import { buildLogEntry, writeLogEntry } from './chat-logger';
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
+import { runOnTopicGate } from './relevance/gate';
 
 // Types for the awslambda global (available in Node.js 20 Lambda runtime with RESPONSE_STREAM)
 declare global {
@@ -47,7 +48,7 @@ async function getModel(): Promise<ChatAnthropic> {
   if (cachedModel) return cachedModel;
 
   const result = await ssmClient.send(new GetParameterCommand({
-    Name: '/nakom.is/anthropic-api-key',
+    Name: process.env.ANTHROPIC_API_KEY_PARAM ?? '/nakom.is/anthropic-api-key',
     WithDecryption: true,
   }));
 
@@ -192,6 +193,17 @@ export const handler = awslambda.streamifyResponse(
 
       if (!allowed) {
         writeSSE(responseStream, 'error', { error: 'Daily rate limit exceeded. Please try again tomorrow.' });
+        writeSSE(responseStream, 'done', {});
+        responseStream.end();
+        return;
+      }
+
+      // On-topic gate (NAKO-34): screen the latest message before the expensive
+      // tool-calling loop; an off-topic message gets the decline as one SSE
+      // message, no agent. Fails open on any error.
+      const gate = await runOnTopicGate(messages);
+      if (gate.block) {
+        writeSSE(responseStream, 'message', { message: gate.message, remaining });
         writeSSE(responseStream, 'done', {});
         responseStream.end();
         return;
