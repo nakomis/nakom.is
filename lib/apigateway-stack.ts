@@ -9,6 +9,7 @@ import { Construct } from 'constructs';
 import { CfnApiGatewayManagedOverrides, EndpointType } from 'aws-cdk-lib/aws-apigatewayv2';
 import { GetApiKeyCr } from './apikey-cr';
 import { LogGroup, QueryDefinition, QueryString, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { DeployEnv, envSuffix, ssmPrefix, logPrefix } from './deploy-env';
 
 export interface ApiGatewayStackProps extends cdk.StackProps {
     urlShortener: IFunction,
@@ -16,6 +17,7 @@ export interface ApiGatewayStackProps extends cdk.StackProps {
     executionRole: iam.Role,
     chatFunction?: IFunction,
     blogSearchFunction?: IFunction,
+    deployEnv: DeployEnv,
 }
 
 export class ApiGatewayStack extends cdk.Stack {
@@ -32,8 +34,12 @@ export class ApiGatewayStack extends cdk.Stack {
         this.bucket = props!.bucket;
         this.executionRole = props!.executionRole;
 
+        const suffix = envSuffix(props!.deployEnv);
+        const ssmPfx = ssmPrefix(props!.deployEnv);
+        const logPfx = logPrefix(props!.deployEnv);
+
         const logGroup = new LogGroup(this, 'ApiGatewayAccessLogs', {
-            logGroupName: '/nakom.is/apigateway/access-log',
+            logGroupName: `${logPfx}/apigateway/access-log`,
             retention: RetentionDays.SIX_MONTHS,
         });
 
@@ -84,12 +90,12 @@ export class ApiGatewayStack extends cdk.Stack {
         // In addition, it's not possible to read the value of the key directly, so I use
         // a Custom resource to obtain the value
         const apiKey = this.gateway.addApiKey('ApiKey', {
-            apiKeyName: 'cfn-nakom.is-app-key'
+            apiKeyName: `cfn-nakom.is-app-key${suffix}`
         });
         this.apiKeyString = new GetApiKeyCr(this, "NISApiKeyGetter", {apiKey: apiKey}).apikeyValue;
 
         const ssmNISAPIKey = new ssm.StringParameter(this, "NISAPIKeyParam", {
-            parameterName: "/nakom.is/nis/apikey",
+            parameterName: `${ssmPfx}nis/apikey`,
             description: "API Key for NIS",
             stringValue: this.apiKeyString
         });
@@ -114,7 +120,7 @@ export class ApiGatewayStack extends cdk.Stack {
             this.addChat(props.chatFunction);
         }
         if (props?.blogSearchFunction) {
-            this.blogSearchApiKeyString = this.addBlogSearch(props.blogSearchFunction);
+            this.blogSearchApiKeyString = this.addBlogSearch(props.blogSearchFunction, suffix, ssmPfx);
         }
         this.addLambda(props!.urlShortener);
         this.addExceptions();
@@ -384,7 +390,7 @@ export class ApiGatewayStack extends cdk.Stack {
         this.addAny405(chatResource);
     }
 
-    addBlogSearch(blogSearchFunction: IFunction): string {
+    addBlogSearch(blogSearchFunction: IFunction, suffix: string, ssmPfx: string): string {
         const apiResource = this.gateway.root.addResource('api');
         const searchResource = apiResource.addResource('search');
 
@@ -408,7 +414,7 @@ export class ApiGatewayStack extends cdk.Stack {
         blogSearchUsagePlan.addApiStage({ stage: this.gateway.deploymentStage });
 
         const blogSearchApiKey = this.gateway.addApiKey('BlogSearchApiKey', {
-            apiKeyName: 'cfn-blog-search-key-v2',
+            apiKeyName: `cfn-blog-search-key-v2${suffix}`,
         });
         blogSearchUsagePlan.addApiKey(blogSearchApiKey);
 
@@ -418,12 +424,12 @@ export class ApiGatewayStack extends cdk.Stack {
 
         // Store in SSM so the blog-app CDK can read it at synth time
         new ssm.StringParameter(this, 'BlogSearchApiKeyParam', {
-            parameterName: '/nakom.is/blog-search-api-key',
+            parameterName: `${ssmPfx}blog-search-api-key`,
             description: 'API key for blog search endpoint (injected by blog CloudFront)',
             stringValue: blogSearchApiKeyValue,
         });
         new ssm.StringParameter(this, 'BlogSearchApiDomainParam', {
-            parameterName: '/nakom.is/blog-search-api-domain',
+            parameterName: `${ssmPfx}blog-search-api-domain`,
             description: 'API Gateway domain for blog search (for blog CloudFront origin)',
             stringValue: cdk.Fn.select(2, cdk.Fn.split('/', this.gateway.url)),
         });
