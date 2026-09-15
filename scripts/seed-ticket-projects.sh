@@ -3,10 +3,15 @@
 # Existing rows are left alone, so edits made in the console survive a re-run.
 set -euo pipefail
 
-# Deliberately not inherited from AWS_PROFILE, which may point at another account
-PROFILE="nakom.is-admin"
 REGION="eu-west-2"
-TABLE="ticket-projects"
+# Seeds production by default; pass sandbox as $1 for the sandbox account and table.
+# The profile is deliberately not inherited from AWS_PROFILE, which may point elsewhere.
+ENV="${1:-prod}"
+case "$ENV" in
+    prod)    PROFILE="nakom.is-admin";   TABLE="ticket-projects" ;;
+    sandbox) PROFILE="nakom.is-sandbox"; TABLE="ticket-projects-sandbox" ;;
+    *)       echo "usage: $0 [prod|sandbox]" >&2; exit 2 ;;
+esac
 TAIGA="https://taiga.home.nakomis.com/project"
 
 # alias  project slug

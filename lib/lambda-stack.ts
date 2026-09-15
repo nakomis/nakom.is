@@ -32,7 +32,7 @@ export class LambdaStack extends cdk.Stack {
         // Maps a ticket project alias (e.g. "home") to a URL template containing {ref}.
         // Rows are data, not infrastructure: edit them in the console or CLI, no deploy needed.
         this.ticketProjectsTable = new dynamodb.TableV2(this, 'TicketProjects', {
-            tableName: 'ticket-projects',
+            tableName: `ticket-projects${suffix}`,
             partitionKey: { name: 'alias', type: dynamodb.AttributeType.STRING },
         });
 
@@ -42,7 +42,6 @@ export class LambdaStack extends cdk.Stack {
             retention: RetentionDays.SIX_MONTHS,
         });
 
-        // Lambda Function
         // Lambda Function (esbuild bundled by CDK). NodejsFunction bundles only
         // this handler's own entry point, so the asset stays small.
         this.redirectsFunction = new NodejsFunction(this, 'RedirectsFunction', {
