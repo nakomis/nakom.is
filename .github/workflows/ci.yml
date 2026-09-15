@@ -57,9 +57,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '25'
-          # No dependency cache: with the privileged checkout of a PR's merge ref
-          # (CHECKOUT_REF), a cache written here could be poisoned and then restored
-          # by default-branch runs. See CodeQL actions/cache-poisoning/poisonable-step.
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install root dependencies
         run: npm ci
@@ -74,10 +73,6 @@ jobs:
 
       - name: Install lambda/linkedin dependencies
         working-directory: lambda/linkedin
-        run: npm ci
-
-      - name: Install lambda/shortener dependencies
-        working-directory: lambda/shortener
         run: npm ci
 
       - name: Test
@@ -108,9 +103,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '25'
-          # No dependency cache: with the privileged checkout of a PR's merge ref
-          # (CHECKOUT_REF), a cache written here could be poisoned and then restored
-          # by default-branch runs. See CodeQL actions/cache-poisoning/poisonable-step.
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install root dependencies
         run: npm ci
@@ -125,10 +119,6 @@ jobs:
 
       - name: Install lambda/linkedin dependencies
         working-directory: lambda/linkedin
-        run: npm ci
-
-      - name: Install lambda/shortener dependencies
-        working-directory: lambda/shortener
         run: npm ci
 
       - name: Configure AWS credentials (sandbox)
@@ -167,9 +157,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '25'
-          # No dependency cache: with the privileged checkout of a PR's merge ref
-          # (CHECKOUT_REF), a cache written here could be poisoned and then restored
-          # by default-branch runs. See CodeQL actions/cache-poisoning/poisonable-step.
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install root dependencies
         run: npm ci
@@ -184,10 +173,6 @@ jobs:
 
       - name: Install lambda/linkedin dependencies
         working-directory: lambda/linkedin
-        run: npm ci
-
-      - name: Install lambda/shortener dependencies
-        working-directory: lambda/shortener
         run: npm ci
 
       - name: Configure AWS credentials (sandbox)
@@ -226,9 +211,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '25'
-          # No dependency cache: with the privileged checkout of a PR's merge ref
-          # (CHECKOUT_REF), a cache written here could be poisoned and then restored
-          # by default-branch runs. See CodeQL actions/cache-poisoning/poisonable-step.
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
 
       - name: Install root dependencies
         run: npm ci
@@ -243,10 +227,6 @@ jobs:
 
       - name: Install lambda/linkedin dependencies
         working-directory: lambda/linkedin
-        run: npm ci
-
-      - name: Install lambda/shortener dependencies
-        working-directory: lambda/shortener
         run: npm ci
 
       - name: Configure AWS credentials (prod)

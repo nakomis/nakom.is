@@ -34,6 +34,3 @@ config.json
 
 # Plan files
 PLAN.md
-
-# Lambda shortener dependencies (package-lock.json is committed for CI)
-lambda/shortener/node_modules
