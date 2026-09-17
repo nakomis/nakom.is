@@ -5,10 +5,15 @@ import theMatrix from './__fixtures__/imdb/the-matrix.json';
 import inception from './__fixtures__/imdb/inception.json';
 import dune from './__fixtures__/imdb/dune.json';
 import nothing from './__fixtures__/imdb/zzqxv-nonsense-qqq.json';
+import stacyClausen from './__fixtures__/imdb/stacy-clausen.json';
+import chrisEvans from './__fixtures__/imdb/chris-evans.json';
 
 // Responses recorded from IMDb's suggestion endpoint on 17 Sep 2026, keyed by
-// the title each was fetched for.
-const RECORDED: Record<string, unknown> = { 'the matrix': theMatrix, inception, dune, 'zzqxv nonsense qqq': nothing };
+// the query each was fetched for.
+const RECORDED: Record<string, unknown> = {
+    'the matrix': theMatrix, inception, dune, 'zzqxv nonsense qqq': nothing,
+    'stacy clausen': stacyClausen, 'chris evans': chrisEvans,
+};
 
 function recordedFetcher() {
     const urls: string[] = [];
@@ -25,6 +30,7 @@ function resolve(path: string, fetcher: Fetcher = recordedFetcher().fetcher) {
 }
 
 const title = (id: string) => ({ statusCode: 302, headers: { Location: `https://www.imdb.com/title/${id}/`, 'Cache-Control': 'no-store' } });
+const person = (id: string) => ({ statusCode: 302, headers: { Location: `https://www.imdb.com/name/${id}/`, 'Cache-Control': 'no-store' } });
 const search = (q: string) => ({ statusCode: 302, headers: { Location: `https://www.imdb.com/find/?q=${q}`, 'Cache-Control': 'no-store' } });
 
 beforeEach(() => {
@@ -44,6 +50,17 @@ describe('imdb resolver', () => {
         await expect(resolve(path)).resolves.toEqual(title(id));
     });
 
+    test.each([
+        ['imdb/stacy clausen', 'nm10988681'], // the only exact match
+        ['imdb/Chris Evans', 'nm0262635'],    // three exact matches; the actor is the most popular
+    ])('%s → person %s', async (path, id) => {
+        await expect(resolve(path)).resolves.toEqual(person(id));
+    });
+
+    test('a year rules people out', async () => {
+        await expect(resolve('imdb/stacy clausen 2023')).resolves.toEqual(search('stacy%20clausen%202023'));
+    });
+
     test('asks IMDb about the title without the year', async () => {
         const { fetcher, urls } = recordedFetcher();
         await resolve('imdb/the matrix 1999', fetcher);
@@ -58,9 +75,11 @@ describe('imdb resolver', () => {
         await expect(resolve(path)).resolves.toEqual(search(q));
     });
 
-    test('bare imdb/ → IMDb home page', async () => {
+    // A bare nakom.is/imdb/ reaches the Lambda as "imdb": the trailing slash is
+    // stripped upstream. Both spellings go to the home page without a lookup.
+    test.each(['imdb/', 'imdb'])('bare %s → IMDb home page', async (path) => {
         const { fetcher, urls } = recordedFetcher();
-        await expect(resolve('imdb/', fetcher)).resolves.toEqual({
+        await expect(resolve(path, fetcher)).resolves.toEqual({
             statusCode: 302, headers: { Location: 'https://www.imdb.com/', 'Cache-Control': 'no-store' },
         });
         expect(urls).toHaveLength(0);
@@ -84,16 +103,23 @@ describe('imdb resolver', () => {
 
     test('ignores paths outside imdb/', () => {
         const resolver = imdbResolver(recordedFetcher().fetcher);
-        expect(resolver.match('imdb')).toBeNull();
         expect(resolver.match('imdbthe matrix')).toBeNull();
+        expect(resolver.match('imdbx')).toBeNull();
         expect(resolver.match('plane/home')).toBeNull();
     });
 });
 
 describe('pick', () => {
-    test('ignores names, franchises and other non-title suggestions', () => {
-        expect(pick([{ id: 'nm0000206', l: 'Keanu Reeves' }, { id: 'tt0133093', l: 'The Matrix', y: 1999 }], 'the matrix'))
+    test('ignores franchises, companies and other suggestions that are neither titles nor people', () => {
+        expect(pick([{ id: 'in0000304', l: 'The Matrix' }, { id: 'tt0133093', l: 'The Matrix', y: 1999 }], 'the matrix'))
             .toBe('tt0133093');
+        expect(pick([{ id: 'co0002663', l: 'Warner Bros.' }], 'warner bros')).toBeUndefined();
+    });
+
+    test('titles and people compete in popularity order', () => {
+        const heat = [{ id: 'tt0113277', l: 'Heat', y: 1995 }, { id: 'nm9999999', l: 'Heat' }];
+        expect(pick(heat, 'heat')).toBe('tt0113277');
+        expect(pick([...heat].reverse(), 'heat')).toBe('nm9999999');
     });
 
     test('matches titles regardless of punctuation, accents and ampersands', () => {
