@@ -58,7 +58,7 @@ AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
 
 - `match()` must be pure and synchronous. Only the winning resolver does I/O; `resolve()` may return `null` to decline and let the chain continue.
 - Resolvers that own a namespace match a `word/` prefix (e.g. `plane/`, `imdb/`). Short links in the `redirects` table must never contain a `/`, so the two can't collide.
-- `plane/<alias> <ref>` (and the legacy `taiga/` prefix) uses the `ticket-projects` table (`alias` → `urlTemplate` with `{ref}`, plus `projectUrl` for `plane/<alias>` with no ref). The rows are data: edit them directly, or rerun `scripts/seed-ticket-projects.sh` (`--overwrite` to replace, `--prune` to delete unlisted aliases), rather than redeploying. When a Plane project is added, add its identifier and UUID (from its `/projects/<uuid>/issues/` URL) to the script. The Lambda never calls Plane: the URLs are static, so no API key or client certificate lives in AWS.
+- `plane/<alias> <ref>` (and the legacy `taiga/` prefix) uses the `ticket-projects` table (`alias` → `urlTemplate` with `{ref}`, plus `projectUrl` for `plane/<alias>` with no ref). The rows are data: edit them directly rather than redeploying. A new Plane project's row is written by the Plane MCP when it creates the project, and its `sync_shortener_projects` tool upserts every project (archived included) to backfill or recover. `scripts/seed-ticket-projects.sh` only writes the hand-picked extra aliases (`nako`, `nest`, `lapcat`, …), which Plane knows nothing about. The Lambda never calls Plane: the URLs are static, so no API key or client certificate lives in AWS.
 
 ## Blog RAG search
 

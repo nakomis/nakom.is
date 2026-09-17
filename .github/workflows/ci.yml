@@ -140,6 +140,14 @@ jobs:
       (needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch') &&
       needs.synth-infra.result == 'success'
     environment: sandbox
+    # One deploy at a time. CloudFormation rejects a second update to a stack
+    # that is already updating, so two merges in quick succession used to race
+    # and one run failed. Deliberately per job rather than workflow-wide:
+    # a workflow-level group would also make a run waiting at the production
+    # approval gate block every later run's tests.
+    concurrency:
+      group: deploy-sandbox
+      cancel-in-progress: false
     permissions:
       id-token: write
       contents: read
@@ -194,6 +202,9 @@ jobs:
       needs.changes.outputs.infra == 'true' &&
       needs.deploy-infra-sandbox.result == 'success'
     environment: production
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
     permissions:
       id-token: write
       contents: read
