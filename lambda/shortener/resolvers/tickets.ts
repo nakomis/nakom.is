@@ -12,11 +12,12 @@ export interface TicketMatch {
 // plane/ is the current prefix; taiga/ keeps pre-Plane bookmarks and keywords working
 const PREFIXES = ['plane/', 'taiga/'];
 
-// "home 123", "home #123", "home+123", "HOME-123"
-const ALIAS_AND_REF = /^([a-z0-9]+)(?:[\s+]+#?|-)(\d+)$/i;
+// "home", or with a work item: "home 123", "home #123", "home+123", "HOME-123"
+const ALIAS_AND_REF = /^([a-z0-9]+)(?:(?:[\s+]+#?|-)(\d+))?$/i;
 
 // nakom.is/plane/home 123 → the urlTemplate stored for "home", with {ref} filled in.
-// Unknown aliases and malformed input fall back to a Google search for the query.
+// nakom.is/plane/home     → the projectUrl stored for "home".
+// Unknown aliases, missing URLs and malformed input fall back to a Google search.
 export function ticketResolver(client: DynamoSender, tableName: string): Resolver<TicketMatch> {
     return {
         name: 'tickets',
@@ -30,7 +31,7 @@ export function ticketResolver(client: DynamoSender, tableName: string): Resolve
             return parsed ? { query, alias: parsed[1].toLowerCase(), ref: parsed[2] } : { query };
         },
         resolve: async ({ query, alias, ref }) => {
-            if (!alias || !ref) {
+            if (!alias) {
                 console.log(`Tickets: couldn't parse "${query}"`);
                 return googleSearch(query);
             }
@@ -38,6 +39,15 @@ export function ticketResolver(client: DynamoSender, tableName: string): Resolve
                 TableName: tableName,
                 Key: { alias: { S: alias } },
             }));
+            if (!ref) {
+                const projectUrl = result.Item?.projectUrl?.S;
+                if (!projectUrl) {
+                    console.log(`Tickets: no project URL for "${alias}"`);
+                    return googleSearch(query);
+                }
+                console.log(`Tickets: ${alias}`);
+                return redirect(projectUrl, 'no-store', 302);
+            }
             const template = result.Item?.urlTemplate?.S;
             if (!template) {
                 console.log(`Tickets: unknown alias "${alias}"`);
