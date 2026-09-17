@@ -1,17 +1,23 @@
 import * as cdk from 'aws-cdk-lib';
 import { Duration } from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import * as rolesanywhere from 'aws-cdk-lib/aws-rolesanywhere';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { DeployEnv, envSuffix, logPrefix } from './deploy-env';
+import { DeployEnv, envSuffix, logPrefix, ssmPrefix } from './deploy-env';
 
 export interface LambdaStackProps extends cdk.StackProps {
     deployEnv: DeployEnv;
 }
 
 export class LambdaStack extends cdk.Stack {
+    /** CN the Plane MCP's Roles Anywhere client certificate must carry. */
+    static readonly PLANE_MCP_CN = 'plane-mcp';
+
     readonly redirectsFunction: lambda.Function;
     readonly redirectsFunctionAlias: lambda.Alias;
     readonly redirectTable: dynamodb.TableV2;
@@ -72,6 +78,72 @@ export class LambdaStack extends cdk.Stack {
 
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:UpdateItem");
         this.ticketProjectsTable.grant(this.redirectsFunction, "dynamodb:GetItem");
+
+        this.addPlaneMcpSyncRole(props.deployEnv);
+    }
+
+    /**
+     * Lets the Plane MCP on Martin's Mac keep ticket-projects in step with Plane
+     * (a row per project, written when the MCP creates one). It authenticates
+     * with IAM Roles Anywhere, reusing the home CA trust anchor that
+     * home-servers' ConversationMemoryIngestStack publishes, so no long-lived
+     * AWS keys live on the Mac.
+     */
+    private addPlaneMcpSyncRole(deployEnv: DeployEnv) {
+        // Dynamic reference rather than valueForStringParameter: the latter
+        // synthesises a CloudFormation parameter, and an ARN threaded through
+        // one cannot be used in an IAM condition at synth time.
+        const trustAnchorArn = `{{resolve:ssm:/conversation-memory/${deployEnv}/trust-anchor-arn}}`;
+
+        const role = new iam.Role(this, 'PlaneMcpSyncRole', {
+            roleName: `plane-mcp-sync${envSuffix(deployEnv)}`,
+            description: 'Plane MCP: keep the ticket-projects table in step with Plane',
+            assumedBy: new iam.ServicePrincipal('rolesanywhere.amazonaws.com', {
+                conditions: {
+                    ArnEquals: { 'aws:SourceArn': trustAnchorArn },
+                    // Pinned to the CN, so a certificate issued for any other
+                    // component cannot assume this role.
+                    StringEquals: { 'aws:PrincipalTag/x509Subject/CN': LambdaStack.PLANE_MCP_CN },
+                },
+            }),
+            maxSessionDuration: Duration.hours(1),
+        });
+
+        // Roles Anywhere needs TagSession and SetSourceIdentity alongside
+        // AssumeRole to project the certificate's subject into session tags.
+        // The CN condition is deliberately absent here: the tag it tests is
+        // populated by this very call, so requiring it would deadlock.
+        role.assumeRolePolicy?.addStatements(new iam.PolicyStatement({
+            actions: ['sts:TagSession', 'sts:SetSourceIdentity'],
+            principals: [new iam.ServicePrincipal('rolesanywhere.amazonaws.com')],
+            conditions: { ArnEquals: { 'aws:SourceArn': trustAnchorArn } },
+        }));
+
+        // UpdateItem only: the MCP upserts rows, merging into any existing
+        // attributes. No DeleteItem, so hand-added aliases can't be removed,
+        // and no read of the redirects table or anything else.
+        this.ticketProjectsTable.grant(role, 'dynamodb:UpdateItem');
+
+        const profile = new rolesanywhere.CfnProfile(this, 'PlaneMcpSyncProfile', {
+            name: `plane-mcp-sync${envSuffix(deployEnv)}`,
+            enabled: true,
+            roleArns: [role.roleArn],
+            durationSeconds: Duration.hours(1).toSeconds(),
+        });
+
+        const params: Record<string, string> = {
+            'role-arn': role.roleArn,
+            'profile-arn': profile.attrProfileArn,
+            'trust-anchor-arn': trustAnchorArn,
+            'table-name': this.ticketProjectsTable.tableName,
+            'cn': LambdaStack.PLANE_MCP_CN,
+        };
+        for (const [name, value] of Object.entries(params)) {
+            new ssm.StringParameter(this, `PlaneMcpParam${name.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`, {
+                parameterName: `${ssmPrefix(deployEnv)}plane-mcp/${name}`,
+                stringValue: value,
+            });
+        }
     }
 
     getLambda(): lambda.Function {
