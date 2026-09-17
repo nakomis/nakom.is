@@ -2,6 +2,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { AnyResolver, RedirectResponse, runChain } from './resolver';
 import { catResolver } from './resolvers/cat';
 import { googleResolver } from './resolvers/google';
+import { imdbResolver } from './resolvers/imdb';
 import { shortLinkResolver } from './resolvers/short-link';
 import { ticketResolver } from './resolvers/tickets';
 
@@ -14,6 +15,7 @@ const client = new DynamoDBClient({});
 // Order matters: first match wins, Google is always last.
 const resolvers: AnyResolver[] = [
     catResolver,
+    imdbResolver(),
     ticketResolver(client, process.env.TICKET_PROJECTS_TABLE ?? 'ticket-projects'),
     shortLinkResolver(client, process.env.REDIRECTS_TABLE ?? 'redirects'),
     googleResolver,
