@@ -124,6 +124,24 @@ export class LambdaStack extends cdk.Stack {
         // and no read of the redirects table or anything else.
         this.ticketProjectsTable.grant(role, 'dynamodb:UpdateItem');
 
+        // The Mac fetches its own renewed certificate with the one it holds
+        // (HOME-389). The home cert portal renews plane-mcp automatically and
+        // publishes the pair to these two parameters; granting read here means
+        // no admin credentials are involved, and a certificate that has
+        // already expired can't fetch its successor.
+        role.addToPolicy(new iam.PolicyStatement({
+            actions: ['ssm:GetParameter'],
+            resources: ['client-cert', 'client-key'].map(name =>
+                `arn:aws:ssm:${this.region}:${this.account}:parameter/plane-mcp/${deployEnv}/${name}`),
+        }));
+        // The key is a SecureString. Decrypt only through SSM, never as a
+        // general-purpose KMS grant.
+        role.addToPolicy(new iam.PolicyStatement({
+            actions: ['kms:Decrypt'],
+            resources: ['*'],
+            conditions: { StringEquals: { 'kms:ViaService': `ssm.${this.region}.amazonaws.com` } },
+        }));
+
         const profile = new rolesanywhere.CfnProfile(this, 'PlaneMcpSyncProfile', {
             name: `plane-mcp-sync${envSuffix(deployEnv)}`,
             enabled: true,
