@@ -15,8 +15,17 @@ export interface LambdaStackProps extends cdk.StackProps {
 }
 
 export class LambdaStack extends cdk.Stack {
-    /** CN the Plane MCP's Roles Anywhere client certificate must carry. */
-    static readonly PLANE_MCP_CN = 'plane-mcp';
+    /**
+     * One Roles Anywhere identity per Mac running the Plane MCP (HOME-392).
+     * Each has its own CN, role, profile and renewal parameters, so CloudTrail
+     * can tell the Macs apart and one can be revoked without the other. The
+     * `id` prefixes construct IDs; Phi's is the original, so it must not change
+     * or CloudFormation would replace the role it is using.
+     */
+    static readonly PLANE_MCP_IDENTITIES = [
+        { cn: 'plane-mcp', id: 'PlaneMcp', name: 'plane-mcp-sync' },
+        { cn: 'plane-mcp-mu', id: 'PlaneMcpMu', name: 'plane-mcp-sync-mu' },
+    ] as const;
 
     readonly redirectsFunction: lambda.Function;
     readonly redirectsFunctionAlias: lambda.Alias;
@@ -79,31 +88,36 @@ export class LambdaStack extends cdk.Stack {
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:UpdateItem");
         this.ticketProjectsTable.grant(this.redirectsFunction, "dynamodb:GetItem");
 
-        this.addPlaneMcpSyncRole(props.deployEnv);
+        for (const identity of LambdaStack.PLANE_MCP_IDENTITIES) {
+            this.addPlaneMcpSyncRole(props.deployEnv, identity);
+        }
     }
 
     /**
-     * Lets the Plane MCP on Martin's Mac keep ticket-projects in step with Plane
+     * Lets the Plane MCP on one of Martin's Macs keep ticket-projects in step with Plane
      * (a row per project, written when the MCP creates one). It authenticates
      * with IAM Roles Anywhere, reusing the home CA trust anchor that
      * home-servers' ConversationMemoryIngestStack publishes, so no long-lived
      * AWS keys live on the Mac.
      */
-    private addPlaneMcpSyncRole(deployEnv: DeployEnv) {
+    private addPlaneMcpSyncRole(
+        deployEnv: DeployEnv,
+        { cn, id, name: baseName }: typeof LambdaStack.PLANE_MCP_IDENTITIES[number],
+    ) {
         // Dynamic reference rather than valueForStringParameter: the latter
         // synthesises a CloudFormation parameter, and an ARN threaded through
         // one cannot be used in an IAM condition at synth time.
         const trustAnchorArn = `{{resolve:ssm:/conversation-memory/${deployEnv}/trust-anchor-arn}}`;
 
-        const role = new iam.Role(this, 'PlaneMcpSyncRole', {
-            roleName: `plane-mcp-sync${envSuffix(deployEnv)}`,
+        const role = new iam.Role(this, `${id}SyncRole`, {
+            roleName: `${baseName}${envSuffix(deployEnv)}`,
             description: 'Plane MCP: keep the ticket-projects table in step with Plane',
             assumedBy: new iam.ServicePrincipal('rolesanywhere.amazonaws.com', {
                 conditions: {
                     ArnEquals: { 'aws:SourceArn': trustAnchorArn },
                     // Pinned to the CN, so a certificate issued for any other
                     // component cannot assume this role.
-                    StringEquals: { 'aws:PrincipalTag/x509Subject/CN': LambdaStack.PLANE_MCP_CN },
+                    StringEquals: { 'aws:PrincipalTag/x509Subject/CN': cn },
                 },
             }),
             maxSessionDuration: Duration.hours(1),
@@ -125,14 +139,14 @@ export class LambdaStack extends cdk.Stack {
         this.ticketProjectsTable.grant(role, 'dynamodb:UpdateItem');
 
         // The Mac fetches its own renewed certificate with the one it holds
-        // (HOME-389). The home cert portal renews plane-mcp automatically and
-        // publishes the pair to these two parameters; granting read here means
-        // no admin credentials are involved, and a certificate that has
-        // already expired can't fetch its successor.
+        // (HOME-389). The home cert portal renews it automatically and
+        // publishes the pair to these two parameters, named after the CN;
+        // granting read here means no admin credentials are involved, and a
+        // certificate that has already expired can't fetch its successor.
         role.addToPolicy(new iam.PolicyStatement({
             actions: ['ssm:GetParameter'],
             resources: ['client-cert', 'client-key'].map(name =>
-                `arn:aws:ssm:${this.region}:${this.account}:parameter/plane-mcp/${deployEnv}/${name}`),
+                `arn:aws:ssm:${this.region}:${this.account}:parameter/${cn}/${deployEnv}/${name}`),
         }));
         // The key is a SecureString. Decrypt only through SSM, never as a
         // general-purpose KMS grant.
@@ -142,8 +156,8 @@ export class LambdaStack extends cdk.Stack {
             conditions: { StringEquals: { 'kms:ViaService': `ssm.${this.region}.amazonaws.com` } },
         }));
 
-        const profile = new rolesanywhere.CfnProfile(this, 'PlaneMcpSyncProfile', {
-            name: `plane-mcp-sync${envSuffix(deployEnv)}`,
+        const profile = new rolesanywhere.CfnProfile(this, `${id}SyncProfile`, {
+            name: `${baseName}${envSuffix(deployEnv)}`,
             enabled: true,
             roleArns: [role.roleArn],
             durationSeconds: Duration.hours(1).toSeconds(),
@@ -154,11 +168,11 @@ export class LambdaStack extends cdk.Stack {
             'profile-arn': profile.attrProfileArn,
             'trust-anchor-arn': trustAnchorArn,
             'table-name': this.ticketProjectsTable.tableName,
-            'cn': LambdaStack.PLANE_MCP_CN,
+            'cn': cn,
         };
         for (const [name, value] of Object.entries(params)) {
-            new ssm.StringParameter(this, `PlaneMcpParam${name.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`, {
-                parameterName: `${ssmPrefix(deployEnv)}plane-mcp/${name}`,
+            new ssm.StringParameter(this, `${id}Param${name.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`, {
+                parameterName: `${ssmPrefix(deployEnv)}${cn}/${name}`,
                 stringValue: value,
             });
         }
