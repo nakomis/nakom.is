@@ -108,16 +108,28 @@ function handler(event) {
             },
         };
 
-        // ads.txt must be served directly so Google Ads can fetch it from nakomis.com/ads.txt.
-        // Without this explicit behaviour the default behaviour's redirect function would send
-        // the request to blog.nakomis.com/ads.txt instead. Prod only — nakomis.com is not in sandbox.
+        // Paths that must bypass the default behaviour's viewer-request redirect.
+        // The default behaviour sends every nakomis.com/www.nakomis.com request to
+        // blog.nakomis.com, so any file that has to be served from nakomis.com itself
+        // needs its own behaviour here. Behaviours without a function association skip
+        // the redirect entirely and go straight to the API Gateway origin, which serves
+        // the file from the private S3 bucket (see the exception paths in
+        // lib/apigateway-stack.ts). To add another bypass path, add it to this list and
+        // make sure API Gateway has an exception for it. Prod only, as nakomis.com is not
+        // in sandbox.
+        //   ads.txt     – so Google Ads can fetch nakomis.com/ads.txt
+        //   robots.txt  – so crawlers get nakomis.com's own robots.txt, not the blog's
+        //   favicon.ico – so browsers get the favicon rather than a redirect
+        const redirectBypassPaths = ['ads.txt', 'robots.txt', 'favicon.ico'];
         if (isProd) {
-            additionalBehaviors['ads.txt'] = {
-                origin: apiOrigin,
-                allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-                cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-                viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-            };
+            for (const path of redirectBypassPaths) {
+                additionalBehaviors[path] = {
+                    origin: apiOrigin,
+                    allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                    cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+                    viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                };
+            }
         }
 
         // Streaming chat endpoint via Lambda Function URL (SSE support).
@@ -163,7 +175,10 @@ function handler(event) {
             : [primaryDomain, cvDomain];
 
         this.distrubution = new cloudfront.Distribution(this, 'NakomIsDistribution', {
-            comment: 'URL Shortener',
+            // CloudFront limits comments to 128 characters.
+            comment: isProd
+                ? 'nakom.is shortener, CV, chat & S3 files; nakomis.com to blog (bar ads/robots.txt, favicon); nakom.is/ to cv.nakomis.com'
+                : 'sandbox.nakom.is shortener, CV, chat & S3 files; sandbox.nakom.is/ to cv.sandbox.nakomis.com',
             defaultRootObject: 'social',
             defaultBehavior: {
                 origin: apiOrigin,

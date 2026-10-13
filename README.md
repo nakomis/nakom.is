@@ -48,6 +48,8 @@ In addition, I had several existing records for MX records and various other pro
 
 The [Cloudfront](lib/cloudfront-stack.ts) stack creates a Cloudfront CDN with a single origin for the API Gateway. The CDN's primary responsibility is redirecting HTTP requests to HTTPS, which is not supported by API Gateway (for good reason). A CDN is probably overkill for this, but it's trivial to set up and [virtually free](https://aws.amazon.com/cloudfront/pricing/) for my use-case.
 
+A viewer-request [CloudFront Function](lib/cloudfront-stack.ts) on the default behaviour handles the site-wide redirects: in production, everything on nakomis.com and www.nakomis.com goes to blog.nakomis.com, and the nakom.is root goes to cv.nakomis.com. Paths that must be served from nakomis.com itself, currently *ads.txt*, *robots.txt* and *favicon.ico*, get their own `additionalBehaviors` entry with no function association, so they skip the redirect and go straight to the API Gateway. To add another, put the path in `redirectBypassPaths` in the CloudFront stack and make sure the API Gateway has an exception path that serves it.
+
 The CDN also acts as the SSL termination point, with a certificate installed covering the three domain names used for the site. In addition it adds the API Key to all inbound requests, which is used by the API Gateway usage plan.
 
 ### Certificate Manager
