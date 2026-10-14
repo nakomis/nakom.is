@@ -31,20 +31,31 @@ const nvirginiaEnv = { env: { account: accountId, region: 'us-east-1' } };
 
 const app = new cdk.App();
 
-const s3Stack = new S3Stack(app, "S3Stack", { ...londonEnv, deployEnv });
-const lambdaStack = new LambdaStack(app, "LambdaStack", { ...londonEnv, deployEnv });
+const s3Stack = new S3Stack(app, "S3Stack", {
+    ...londonEnv,
+    description: 'Public files bucket, private source-documents bucket and the role API Gateway uses to read S3 (plus, in prod, the reserved nakom.is bucket name).',
+    deployEnv,
+});
+const lambdaStack = new LambdaStack(app, "LambdaStack", {
+    ...londonEnv,
+    description: 'URL shortener Lambda with its redirects and ticket-projects DynamoDB tables, and the Roles Anywhere roles the Plane MCP uses to sync ticket projects.',
+    deployEnv,
+});
 const r53Stack = new Route53Stack(app, 'Route53Stack', {
     ...londonEnv,
+    description: 'Route53 hosted zones for nakom.is, nakomis.com and nakomis.co.uk with their legacy records (prod), or lookups of the sandbox.nakom.is and sandbox.nakomis.com zones (sandbox).',
     deployEnv,
     crossRegionReferences: true,
 });
 const sesStack = new SESStack(app, 'SESStack', {
     ...londonEnv,
+    description: 'SES domain identity for nakom.is (sandbox.nakom.is in sandbox) as the chat@ sender, with DKIM records and a custom MAIL FROM domain.',
     deployEnv,
     nakomIsZone: r53Stack.hostedZones.find(z => z.zoneName === r53Stack.nakomIsHostedZone.zoneName)!.zone,
 });
 const chatStack = new ChatStack(app, 'ChatStack', {
     ...londonEnv,
+    description: 'Chat, streaming chat and blog search Lambdas with their rate-limit, CV chat log and blog-chunks DynamoDB tables.',
     deployEnv,
     sesIdentity: sesStack.emailIdentity,
     sesFromAddress: sesStack.fromAddress,
@@ -52,6 +63,7 @@ const chatStack = new ChatStack(app, 'ChatStack', {
 });
 const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
     ...londonEnv,
+    description: 'REST API fronting the URL shortener, chat, blog search and S3 files, with its API keys and usage plans.',
     deployEnv,
     urlShortener: lambdaStack.getLambdaAlias(),
     bucket: s3Stack.s3bucket(),
@@ -61,12 +73,14 @@ const apiGatewayStack = new ApiGatewayStack(app, 'ApiGatewayStack', {
 });
 const certificateStack = new CertificateStack(app, 'CertificateStack', {
     ...nvirginiaEnv,
+    description: 'ACM certificate in us-east-1 for the CloudFront distribution, DNS-validated in the Route53 hosted zones.',
     deployEnv,
     crossRegionReferences: true,
     hostedZones: r53Stack.hostedZones,
 });
 const cloudfrontStack = new CloudfrontStack(app, 'CloudfrontStack', {
     ...londonEnv,
+    description: 'CloudFront distribution in front of API Gateway (and, in prod, the streaming chat Lambda), with redirect functions and the cv subdomain alias record.',
     deployEnv,
     gateway: apiGatewayStack.gateway,
     certificate: certificateStack.certificate,
@@ -76,17 +90,20 @@ const cloudfrontStack = new CloudfrontStack(app, 'CloudfrontStack', {
 });
 const route53AdditionalStack = new Route53AdditionalStack(app, 'Route53AdditionalStack', {
     ...londonEnv,
+    description: 'A and AAAA alias records pointing each nakom.is-family zone apex at the CloudFront distribution.',
     cloudfront: cloudfrontStack.distrubution,
     hostedZones: r53Stack.hostedZones.filter(z => !z.zoneName.includes('silverknowes')),
     crossRegionReferences: true,
 });
 const iamSecretStack = new IAMSecretStack(app, 'IAMSecretStack', {
     ...londonEnv,
+    description: 'IAM user for the nis shortcut CLI, with its access key stored in SSM and access to the redirects table.',
     deployEnv,
     redirectsTable: lambdaStack.redirectTable,
 });
 const cvStack = new CvStack(app, 'CvStack', {
     ...londonEnv,
+    description: 'Lambda that renders cv.md from the private bucket to a PDF in the public bucket and invalidates CloudFront.',
     deployEnv,
     privateBucket: s3Stack.privateBucket,
     publicBucket: s3Stack.bucket,
@@ -94,6 +111,7 @@ const cvStack = new CvStack(app, 'CvStack', {
 });
 const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
     ...londonEnv,
+    description: 'Lambda that turns a LinkedIn CSV export in the private bucket into linkedin.md.',
     deployEnv,
     privateBucket: s3Stack.privateBucket,
 });
@@ -102,6 +120,7 @@ const linkedInStack = new LinkedInStack(app, 'LinkedInStack', {
 
 new GithubCiStack(app, 'GithubCiStack', {
     ...londonEnv,
+    description: 'IAM role assumed by nakom.is GitHub Actions via OIDC to run CDK deploys.',
     deployEnv,
     githubOidcProviderArn: `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
 });

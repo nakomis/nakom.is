@@ -44,6 +44,8 @@ The [Route53](lib/route53-stack.ts) stack is used to create the Route53 hosted z
 
 In addition, I had several existing records for MX records and various other projects. I wanted to maintain these records, so I wrote the [utils/getroute53.is](utils/getroute53.is) script to download the records to [JSON files](https://github.com/nakomis/nakom.is/tree/main/route53). The Route53 stack then [parses](lib/route53-stack.ts#L39-L89) these records and adds them to the new hosted zone.
 
+For which hosted zones exist (including the sandbox zones), which repository and stack owns each zone and record, how delegation works and the rule for adding a new record, see [DNS zone ownership](docs/dns-zones.md).
+
 ### Cloudfront
 
 The [Cloudfront](lib/cloudfront-stack.ts) stack creates a Cloudfront CDN with a single origin for the API Gateway. The CDN's primary responsibility is redirecting HTTP requests to HTTPS, which is not supported by API Gateway (for good reason). A CDN is probably overkill for this, but it's trivial to set up and [virtually free](https://aws.amazon.com/cloudfront/pricing/) for my use-case.
