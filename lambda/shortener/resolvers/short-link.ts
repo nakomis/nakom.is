@@ -1,5 +1,5 @@
 import { ConditionalCheckFailedException, DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
-import { buildHitEvent, HIT_PREFIX, HitSink, HitSource, QR_SUFFIX } from '../hits';
+import { buildHitEvent, HIT_PREFIX, HitSink, HitSource, QR_CODE } from '../hits';
 import { redirect, Resolver } from '../resolver';
 
 export type DynamoSender = Pick<DynamoDBClient, 'send'>;
@@ -7,32 +7,36 @@ export type DynamoSender = Pick<DynamoDBClient, 'send'>;
 export interface ShortLinkMatch {
     /** The key in the redirects table. */
     shortPath: string;
-    /** Set only for `hi-` links, which are uncached and publish a hit event. */
+    /** Set only for the book's counted links (`hi-…` and `q01`…`q99`), which are uncached and publish a hit event. */
     source?: HitSource;
 }
 
 /**
- * Pure: which redirects-table key a path refers to.
+ * Pure: which redirects-table key a path refers to, and whether it is one of
+ * the book's counted links (HAND-22).
  *
- * `hi-` links (HAND-22) may carry a trailing `/q`, which the book's QR codes
- * add so a scan can be told from a typed link. It is stripped before the
- * lookup, so both forms hit the same row. Both are matched in any case and
- * looked up in lower case, so `hi-` rows must be stored in lower case. Short links never otherwise contain a
- * `/`, and no namespace resolver claims `hi-…/`, so the suffix cannot collide.
+ * Two forms are counted, both case-insensitively and looked up in lower case
+ * (so their rows must be stored in lower case):
+ *
+ *  - `hi-<slug>`, the link printed in the book: source `link`.
+ *  - `q01` … `q99`, the QR-only codes. A QR code in alphanumeric mode (the
+ *    smallest grid, so the biggest modules) can encode only capitals, so they
+ *    arrive as `Q01`. Source `qr`. Each is an ordinary row in the redirects
+ *    table pointing at the same URL as its `hi-` link; the book's links.json
+ *    maps Q-numbers to slugs, so nothing here needs to.
+ *
+ * Exactly two digits: `q1` and `q001` are ordinary short links. Every other
+ * path keeps its case and behaves exactly as before.
  */
 export function matchShortLink(path: string): ShortLinkMatch | null {
     if (path === '') {
         return null;
     }
-    // Case-insensitive for hi- links only: a QR code in alphanumeric mode (a
-    // smaller grid, so bigger modules) can only encode capitals, so the book's
-    // codes may arrive as HI-PYTHAGORAS/Q. The key is always lower case.
-    // Ordinary short links keep their case exactly as before.
     const lower = path.toLowerCase();
-    if (lower.startsWith(HIT_PREFIX)) {
-        if (lower.endsWith(QR_SUFFIX) && lower.length > HIT_PREFIX.length + QR_SUFFIX.length) {
-            return { shortPath: lower.slice(0, -QR_SUFFIX.length), source: 'qr' };
-        }
+    if (QR_CODE.test(lower)) {
+        return { shortPath: lower, source: 'qr' };
+    }
+    if (lower.startsWith(HIT_PREFIX) && lower.length > HIT_PREFIX.length) {
         return { shortPath: lower, source: 'link' };
     }
     return { shortPath: path };
@@ -41,7 +45,7 @@ export function matchShortLink(path: string): ShortLinkMatch | null {
 // Looks the path up in the redirects table, incrementing its hit count.
 // Declines (returns null) when there's no such short link.
 //
-// Ordinary links: 301 with max-age=600, as they always have been. `hi-` links:
+// Ordinary links: 301 with max-age=600, as they always have been. Counted links:
 // 302 with no-store, so every visit reaches the Lambda, plus one hit event per
 // visit when a sink is configured.
 export function shortLinkResolver(client: DynamoSender, tableName: string, hits?: HitSink): Resolver<ShortLinkMatch> {

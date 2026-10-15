@@ -9,8 +9,16 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { DeployEnv, envSuffix, ssmPrefix } from './deploy-env';
 
-/** Every casing of the `hi-` prefix (HAND-22): CloudFront matches paths case-sensitively. */
-export const HIT_PATH_PATTERNS = ['hi-*', 'HI-*', 'Hi-*', 'hI-*'] as const;
+/**
+ * The book's counted links (HAND-22) in every casing, because CloudFront
+ * matches paths case-sensitively: `hi-<slug>`, and the QR-only codes `Q01` to
+ * `Q99`. `?` matches exactly one character, so `q??` is any three-character
+ * path starting with q; the Lambda decides which of those are Q-codes
+ * (`q` and two digits). The rest are ordinary links that merely lose
+ * CloudFront caching, which the Lambda's own max-age=600 still covers for
+ * browsers.
+ */
+export const HIT_PATH_PATTERNS = ['hi-*', 'HI-*', 'Hi-*', 'hI-*', 'q??', 'Q??'] as const;
 
 export interface CloudfrontStackProps extends cdk.StackProps {
     gateway: api.RestApiBase,
@@ -111,7 +119,7 @@ function handler(event) {
             },
         };
 
-        // Hit-counted book links, nakom.is/hi-<slug>[/q] (HAND-22). The Lambda
+        // Hit-counted book links, nakom.is/hi-<slug> and nakom.is/Q01 (HAND-22). The Lambda
         // derives coarse, non-identifying fields for each hit (country, device,
         // language, OS and browser families) from these headers, which reach the
         // origin only if a policy forwards them. Scoped to this one behaviour, so
@@ -121,7 +129,7 @@ function handler(event) {
         // its own.
         const hitHeadersPolicy = new cloudfront.OriginRequestPolicy(this, 'HitLinkHeadersPolicy', {
             originRequestPolicyName: `nakomis-hit-link-headers${suffix}`,
-            comment: 'hi-* short links: forward viewer geo/device headers, Accept-Language and User-Agent',
+            comment: 'hi-* and Q-code short links: forward viewer geo/device headers, Accept-Language and User-Agent',
             headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
                 'CloudFront-Viewer-Country',
                 'CloudFront-Viewer-Country-Region',
@@ -136,10 +144,7 @@ function handler(event) {
             queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.none(),
             cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
         });
-        // CloudFront path patterns are case-sensitive, and the book's QR codes
-        // may be upper case (alphanumeric mode: HI-PYTHAGORAS/Q), so every
-        // casing of the two-letter prefix gets the same behaviour. The Lambda
-        // lower-cases hi- paths itself.
+        // One behaviour for every pattern in HIT_PATH_PATTERNS (see there).
         const hitBehaviour: cloudfront.BehaviorOptions = {
             origin: apiOrigin,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,

@@ -107,7 +107,7 @@ describe('CloudFront hi-* behaviour', () => {
     describe.each(['prod', 'sandbox'] as DeployEnv[])('%s', (deployEnv) => {
         const template = synth(deployEnv);
 
-        it.each(['hi-*', 'HI-*', 'Hi-*', 'hI-*'])('sends %s to the API Gateway origin, uncached, with the redirect function kept', (pattern) => {
+        it.each(['hi-*', 'HI-*', 'Hi-*', 'hI-*', 'q??', 'Q??'])('sends %s to the API Gateway origin, uncached, with the redirect function kept', (pattern) => {
             const behaviour = behaviours(template).find(b => b.PathPattern === pattern);
             expect(behaviour).toBeDefined();
             expect(behaviour.TargetOriginId).toBe('NakomIsApiOrigin');

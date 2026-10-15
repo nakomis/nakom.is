@@ -2,14 +2,17 @@ import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { ShortenerRequest } from './resolver';
 
 /**
- * Hit events for `hi-` short links (HAND-22).
+ * Hit events for the book's links (HAND-22).
  *
  * The book *Handmade Intelligence* prints `https://nakom.is/hi-<slug>` beside
- * each figure that has an animation, and a QR code for `…/hi-<slug>/q`. Every
- * hit on one of those links is published to SQS and drained into Postgres at
- * home, so Martin can see which ones readers actually use.
+ * each figure that has an animation, and a QR code for a QR-only short code,
+ * `HTTPS://NAKOM.IS/Q01` … `Q99`. Every hit on one of those is published to
+ * SQS and drained into Postgres at home, so Martin can see which ones readers
+ * actually use. `shortPath` is the lower-cased path (`q01` or `hi-pythagoras`);
+ * the book's links.json maps each Q-number to its slug.
  *
- * Every field is derived, and every field is nullable. The viewer's IP is never
+ * Only `shortPath`, `at`, `requestId` and `source` are always set; the rest
+ * are derived and nullable. The viewer's IP is never
  * read, and the raw User-Agent is reduced to coarse OS and browser families
  * here and then dropped: neither reaches the queue.
  */
@@ -35,10 +38,10 @@ export type Device = 'mobile' | 'tablet' | 'desktop' | 'other';
 /** Publishes a hit. Must never throw: a failure is logged and the redirect carries on. */
 export type HitSink = (hit: HitEvent) => Promise<void>;
 
-/** Only links with this prefix are uncached and counted per hit. */
+/** The book's printed links: `hi-<slug>`, counted with source `link`. */
 export const HIT_PREFIX = 'hi-';
-/** The suffix the printed QR codes carry, so a scan can be told from a typed link. */
-export const QR_SUFFIX = '/q';
+/** The book's QR-only codes, `q01` to `q99` (lower-cased), counted with source `qr`. */
+export const QR_CODE = /^q\d{2}$/;
 
 /** Case-insensitive header lookup: API Gateway passes CloudFront's casing through. */
 export function header(headers: ShortenerRequest['headers'], name: string): string | null {

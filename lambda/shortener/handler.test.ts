@@ -120,7 +120,7 @@ describe('shortener handler', () => {
     });
 });
 
-// HAND-22: hi- links are uncached and publish one hit event per visit.
+// HAND-22: the book's hi- links and Q-codes are uncached and publish one hit event per visit.
 describe('hi- links', () => {
     const CLOUDFRONT_HEADERS = {
         'CloudFront-Viewer-Country': 'GB',
@@ -137,7 +137,7 @@ describe('hi- links', () => {
 
     function hiChain(links: Record<string, string>, sink: HitSink = jest.fn(async () => undefined)) {
         const table = fakeTable(links);
-        // The full production order, so a namespace resolver swallowing hi-…/q would show up here.
+        // The full production order, so a namespace resolver swallowing a counted path would show up here.
         const chain: AnyResolver[] = [
             catResolver,
             imdbResolver(jest.fn() as any),
@@ -179,32 +179,39 @@ describe('hi- links', () => {
         });
     });
 
-    test('QR form hi-<slug>/q → same row, same redirect, source "qr"', async () => {
-        const { chain, sink, commands } = hiChain({ 'hi-fig-1-2': 'https://youtu.be/abc' });
-        await expect(handle(event('hi-fig-1-2/q'), chain)).resolves.toEqual({
+    test.each(['Q01', 'q01'])('QR-only code %s → lower-case row q01, 302 no-store, source "qr"', async (path) => {
+        const { chain, sink, commands } = hiChain({ q01: 'https://youtu.be/abc' });
+        await expect(handle(event(path), chain)).resolves.toEqual({
             statusCode: 302,
             headers: { Location: 'https://youtu.be/abc', 'Cache-Control': 'no-store' },
         });
         expect(commands).toHaveLength(1);
-        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'hi-fig-1-2' } });
-        expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'hi-fig-1-2', source: 'qr' });
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'q01' } });
+        expect(sink).toHaveBeenCalledTimes(1);
+        expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'q01', source: 'qr' });
     });
 
-    test('an upper-case QR code (alphanumeric mode) HI-PYTHAGORAS/Q → lower-case row, source "qr"', async () => {
-        const { chain, sink, commands } = hiChain({ 'hi-pythagoras': 'https://youtu.be/abc' });
-        await expect(handle(event('HI-PYTHAGORAS/Q'), chain)).resolves.toEqual({
-            statusCode: 302,
-            headers: { Location: 'https://youtu.be/abc', 'Cache-Control': 'no-store' },
+    test.each(['hi-pythagoras', 'Hi-Pythagoras', 'HI-PYTHAGORAS', 'hI-pYTHAGORAS'])(
+        'typed link %s → lower-case row, 302 no-store, source "link"',
+        async (path) => {
+            const { chain, sink, commands } = hiChain({ 'hi-pythagoras': 'https://youtu.be/abc' });
+            await expect(handle(event(path), chain)).resolves.toEqual({
+                statusCode: 302,
+                headers: { Location: 'https://youtu.be/abc', 'Cache-Control': 'no-store' },
+            });
+            expect(commands[0].input.Key).toEqual({ shortPath: { S: 'hi-pythagoras' } });
+            expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'hi-pythagoras', source: 'link' });
+        },
+    );
+
+    test.each(['q1', 'q001', 'Q1', 'Q001', 'q0a', 'qa1'])('%s is not a Q-code: an ordinary link, case kept', async (path) => {
+        const { chain, sink, commands } = hiChain({ [path]: 'https://example.com' });
+        await expect(handle(event(path), chain)).resolves.toEqual({
+            statusCode: 301,
+            headers: { Location: 'https://example.com', 'Cache-Control': 'max-age=600' },
         });
-        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'hi-pythagoras' } });
-        expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'hi-pythagoras', source: 'qr' });
-    });
-
-    test('mixed case Hi-Pythagoras → lower-case row, source "link"', async () => {
-        const { chain, sink, commands } = hiChain({ 'hi-pythagoras': 'https://youtu.be/abc' });
-        await expect(handle(event('Hi-Pythagoras'), chain)).resolves.toMatchObject({ statusCode: 302 });
-        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'hi-pythagoras' } });
-        expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'hi-pythagoras', source: 'link' });
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: path } });
+        expect(sink).not.toHaveBeenCalled();
     });
 
     test('ordinary links keep their case', async () => {
@@ -212,12 +219,6 @@ describe('hi- links', () => {
         await expect(handle(event('HN'), chain)).resolves.toMatchObject({ statusCode: 301 });
         expect(commands[0].input.Key).toEqual({ shortPath: { S: 'HN' } });
         expect(sink).not.toHaveBeenCalled();
-    });
-
-    test('the QR form also arrives percent-encoded from API Gateway', async () => {
-        const { chain, sink } = hiChain({ 'hi-fig-1-2': 'https://youtu.be/abc' });
-        await expect(handle(event('hi-fig-1-2%2Fq'), chain)).resolves.toMatchObject({ statusCode: 302 });
-        expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ source: 'qr' });
     });
 
     test('never puts the IP or the raw User-Agent in the event', async () => {
@@ -283,25 +284,13 @@ describe('hi- links', () => {
         expect(sink).not.toHaveBeenCalled();
     });
 
-    test('/q is only stripped from hi- links', async () => {
-        const { chain, commands, sink } = hiChain({ 'abc/q': 'example.com', abc: 'other.example.com' });
-        await expect(handle(event('abc/q'), chain)).resolves.toEqual({
-            statusCode: 301,
-            headers: { Location: 'https://example.com', 'Cache-Control': 'max-age=600' },
-        });
-        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'abc/q' } });
-        expect(sink).not.toHaveBeenCalled();
+    test('a bare "hi-" is an ordinary link, not a counted one', () => {
+        expect(matchShortLink('hi-')).toEqual({ shortPath: 'hi-' });
+        expect(matchShortLink('HI-')).toEqual({ shortPath: 'HI-' });
     });
 
-    test('a bare "hi-/q" is not treated as a QR scan of an empty slug', () => {
-        expect(matchShortLink('hi-/q')).toEqual({ shortPath: 'hi-/q', source: 'link' });
-    });
-
-    test('namespace resolvers do not claim hi- paths', () => {
-        expect(imdbResolver(jest.fn() as any).match('hi-x/q')).toBeNull();
-        expect(ticketResolver({ send: jest.fn() } as any, 't').match('hi-x/q')).toBeNull();
-        expect(catResolver.match('hi-x/q')).toBeNull();
-        for (const path of ['HI-X/Q', 'Hi-X/q']) {
+    test('namespace resolvers do not claim counted paths', () => {
+        for (const path of ['hi-x', 'HI-X', 'Hi-X', 'q01', 'Q01']) {
             expect(imdbResolver(jest.fn() as any).match(path)).toBeNull();
             expect(ticketResolver({ send: jest.fn() } as any, 't').match(path)).toBeNull();
             expect(catResolver.match(path)).toBeNull();

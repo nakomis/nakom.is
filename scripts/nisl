@@ -11,14 +11,19 @@ if [[ "hits" == "$1" ]]; then
         exit 1
     fi
     if [ -z "$2" ]; then
-        psql "$DB_URL" -X -P footer=off -c \
-            "SELECT short_path, hits, qr, link, first_at::date AS first, last_at::date AS last
-             FROM shortener.hits_by_slug ORDER BY hits DESC, short_path"
+        # Q-codes (q01…, source qr) and hi- links (source link) are separate
+        # rows; the book's links.json says which Q-number is which slug.
+        psql "$DB_URL" -X -q -P footer=off -v ON_ERROR_STOP=1 <<'SQL'
+SELECT short_path, source, hits, first_at::date AS first, last_at::date AS last
+  FROM shortener.hits_by_slug ORDER BY hits DESC, short_path;
+SELECT source, sum(hits) AS hits FROM shortener.hits_by_source GROUP BY source ORDER BY source;
+SQL
     else
-        # Accept "fig-1-2" or "hi-fig-1-2"; reject anything that isn't a plain slug.
+        # Accept "q01", "Q01", "pythagoras" or "hi-pythagoras"; reject anything
+        # that isn't a plain slug.
         SLUG="$(printf %s "$2" | tr "[:upper:]" "[:lower:]")"
-        [[ "$SLUG" == hi-* ]] || SLUG="hi-$SLUG"
-        if [[ ! "$SLUG" =~ ^[A-Za-z0-9._-]+$ ]]; then
+        [[ "$SLUG" =~ ^q[0-9]{2}$ || "$SLUG" == hi-* ]] || SLUG="hi-$SLUG"
+        if [[ ! "$SLUG" =~ ^[a-z0-9._-]+$ ]]; then
             echo "not a slug: $2" >&2
             exit 1
         fi
@@ -26,9 +31,7 @@ if [[ "hits" == "$1" ]]; then
         # scripts, never in a -c string.
         psql "$DB_URL" -X -q -P footer=off -v ON_ERROR_STOP=1 -v slug="$SLUG" <<'SQL'
 \echo :slug
-SELECT source, hits FROM shortener.hits_by_source
- WHERE short_path = :'slug' ORDER BY hits DESC;
-SELECT day, hits, qr, link FROM shortener.hits_by_day
+SELECT day, hits FROM shortener.hits_by_day
  WHERE short_path = :'slug' ORDER BY day DESC LIMIT 30;
 SELECT coalesce(country, '?') AS country, hits FROM shortener.hits_by_country
  WHERE short_path = :'slug' ORDER BY hits DESC LIMIT 30;
