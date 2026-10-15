@@ -63,6 +63,7 @@ AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
 ### `hi-` links (the book's figures, HAND-22)
 
 - `hi-<slug>` and `hi-<slug>/q` (the QR form) resolve to the same `redirects` row, return **302 with `no-store`** (ordinary links stay 301 / `max-age=600`), and publish one hit event to SQS `nakomis-shortener-hits` (`lambda/shortener/hits.ts`). The send is bounded (500 ms, one attempt) and a failure only logs: it must never break or slow the redirect.
+- `hi-` paths are **case-insensitive** (QR alphanumeric mode encodes only capitals, so `HI-PYTHAGORAS/Q` is normal): they are lower-cased before the lookup, `/Q` counts as `/q`, so `hi-` rows in `redirects` must be stored in lower case. CloudFront has a behaviour for each casing of the prefix (`HIT_PATH_PATTERNS`). Ordinary links keep their case.
 - The event holds derived fields only (geo, device, language, OS/browser family). **Never add the IP or the raw User-Agent.**
 - CloudFront's `hi-*` behaviour is uncached and is the only one with an origin request policy (the viewer headers the event is built from).
 - The consumer that drains the queue into `shortener.hits` on Luke's Postgres lives in home-infra (`cal/shortener-hits-consumer`). Its Roles Anywhere role and the `/nakom.is/shortener-hits/*` parameters it reads are created here, in `LambdaStack`.

@@ -190,6 +190,30 @@ describe('hi- links', () => {
         expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'hi-fig-1-2', source: 'qr' });
     });
 
+    test('an upper-case QR code (alphanumeric mode) HI-PYTHAGORAS/Q → lower-case row, source "qr"', async () => {
+        const { chain, sink, commands } = hiChain({ 'hi-pythagoras': 'https://youtu.be/abc' });
+        await expect(handle(event('HI-PYTHAGORAS/Q'), chain)).resolves.toEqual({
+            statusCode: 302,
+            headers: { Location: 'https://youtu.be/abc', 'Cache-Control': 'no-store' },
+        });
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'hi-pythagoras' } });
+        expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'hi-pythagoras', source: 'qr' });
+    });
+
+    test('mixed case Hi-Pythagoras → lower-case row, source "link"', async () => {
+        const { chain, sink, commands } = hiChain({ 'hi-pythagoras': 'https://youtu.be/abc' });
+        await expect(handle(event('Hi-Pythagoras'), chain)).resolves.toMatchObject({ statusCode: 302 });
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'hi-pythagoras' } });
+        expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'hi-pythagoras', source: 'link' });
+    });
+
+    test('ordinary links keep their case', async () => {
+        const { chain, sink, commands } = hiChain({ HN: 'https://news.ycombinator.com' });
+        await expect(handle(event('HN'), chain)).resolves.toMatchObject({ statusCode: 301 });
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'HN' } });
+        expect(sink).not.toHaveBeenCalled();
+    });
+
     test('the QR form also arrives percent-encoded from API Gateway', async () => {
         const { chain, sink } = hiChain({ 'hi-fig-1-2': 'https://youtu.be/abc' });
         await expect(handle(event('hi-fig-1-2%2Fq'), chain)).resolves.toMatchObject({ statusCode: 302 });
@@ -277,5 +301,10 @@ describe('hi- links', () => {
         expect(imdbResolver(jest.fn() as any).match('hi-x/q')).toBeNull();
         expect(ticketResolver({ send: jest.fn() } as any, 't').match('hi-x/q')).toBeNull();
         expect(catResolver.match('hi-x/q')).toBeNull();
+        for (const path of ['HI-X/Q', 'Hi-X/q']) {
+            expect(imdbResolver(jest.fn() as any).match(path)).toBeNull();
+            expect(ticketResolver({ send: jest.fn() } as any, 't').match(path)).toBeNull();
+            expect(catResolver.match(path)).toBeNull();
+        }
     });
 });

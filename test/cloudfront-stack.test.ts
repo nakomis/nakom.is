@@ -106,10 +106,9 @@ describe('CloudFront redirect bypass behaviours', () => {
 describe('CloudFront hi-* behaviour', () => {
     describe.each(['prod', 'sandbox'] as DeployEnv[])('%s', (deployEnv) => {
         const template = synth(deployEnv);
-        const hi = () => behaviours(template).find(b => b.PathPattern === 'hi-*');
 
-        it('sends hi-* to the API Gateway origin, uncached, with the redirect function kept', () => {
-            const behaviour = hi();
+        it.each(['hi-*', 'HI-*', 'Hi-*', 'hI-*'])('sends %s to the API Gateway origin, uncached, with the redirect function kept', (pattern) => {
+            const behaviour = behaviours(template).find(b => b.PathPattern === pattern);
             expect(behaviour).toBeDefined();
             expect(behaviour.TargetOriginId).toBe('NakomIsApiOrigin');
             expect(behaviour.CachePolicyId).toBe('4135ea2d-6df8-44a3-9df3-4b5a84be39ad');

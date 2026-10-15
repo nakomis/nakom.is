@@ -16,7 +16,7 @@ if [[ "hits" == "$1" ]]; then
              FROM shortener.hits_by_slug ORDER BY hits DESC, short_path"
     else
         # Accept "fig-1-2" or "hi-fig-1-2"; reject anything that isn't a plain slug.
-        SLUG="$2"
+        SLUG="$(printf %s "$2" | tr "[:upper:]" "[:lower:]")"
         [[ "$SLUG" == hi-* ]] || SLUG="hi-$SLUG"
         if [[ ! "$SLUG" =~ ^[A-Za-z0-9._-]+$ ]]; then
             echo "not a slug: $2" >&2

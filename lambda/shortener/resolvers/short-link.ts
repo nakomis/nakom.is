@@ -16,18 +16,24 @@ export interface ShortLinkMatch {
  *
  * `hi-` links (HAND-22) may carry a trailing `/q`, which the book's QR codes
  * add so a scan can be told from a typed link. It is stripped before the
- * lookup, so both forms hit the same row. Short links never otherwise contain a
+ * lookup, so both forms hit the same row. Both are matched in any case and
+ * looked up in lower case, so `hi-` rows must be stored in lower case. Short links never otherwise contain a
  * `/`, and no namespace resolver claims `hi-…/`, so the suffix cannot collide.
  */
 export function matchShortLink(path: string): ShortLinkMatch | null {
     if (path === '') {
         return null;
     }
-    if (path.startsWith(HIT_PREFIX)) {
-        if (path.endsWith(QR_SUFFIX) && path.length > HIT_PREFIX.length + QR_SUFFIX.length) {
-            return { shortPath: path.slice(0, -QR_SUFFIX.length), source: 'qr' };
+    // Case-insensitive for hi- links only: a QR code in alphanumeric mode (a
+    // smaller grid, so bigger modules) can only encode capitals, so the book's
+    // codes may arrive as HI-PYTHAGORAS/Q. The key is always lower case.
+    // Ordinary short links keep their case exactly as before.
+    const lower = path.toLowerCase();
+    if (lower.startsWith(HIT_PREFIX)) {
+        if (lower.endsWith(QR_SUFFIX) && lower.length > HIT_PREFIX.length + QR_SUFFIX.length) {
+            return { shortPath: lower.slice(0, -QR_SUFFIX.length), source: 'qr' };
         }
-        return { shortPath: path, source: 'link' };
+        return { shortPath: lower, source: 'link' };
     }
     return { shortPath: path };
 }

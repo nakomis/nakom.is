@@ -9,6 +9,9 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { DeployEnv, envSuffix, ssmPrefix } from './deploy-env';
 
+/** Every casing of the `hi-` prefix (HAND-22): CloudFront matches paths case-sensitively. */
+export const HIT_PATH_PATTERNS = ['hi-*', 'HI-*', 'Hi-*', 'hI-*'] as const;
+
 export interface CloudfrontStackProps extends cdk.StackProps {
     gateway: api.RestApiBase,
     certificate: cm.Certificate,
@@ -133,7 +136,11 @@ function handler(event) {
             queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.none(),
             cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
         });
-        additionalBehaviors['hi-*'] = {
+        // CloudFront path patterns are case-sensitive, and the book's QR codes
+        // may be upper case (alphanumeric mode: HI-PYTHAGORAS/Q), so every
+        // casing of the two-letter prefix gets the same behaviour. The Lambda
+        // lower-cases hi- paths itself.
+        const hitBehaviour: cloudfront.BehaviorOptions = {
             origin: apiOrigin,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
             // Every hit must reach the Lambda. The Lambda also says no-store, but
@@ -151,6 +158,9 @@ function handler(event) {
                 },
             ],
         };
+        for (const pattern of HIT_PATH_PATTERNS) {
+            additionalBehaviors[pattern] = hitBehaviour;
+        }
 
         // Paths that must bypass the default behaviour's viewer-request redirect.
         // The default behaviour sends every nakomis.com/www.nakomis.com request to
