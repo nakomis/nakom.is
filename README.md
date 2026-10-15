@@ -109,6 +109,8 @@ The [nis](scripts/nis) script creates a new shortcut. It can be used with a spec
 
 The [nisl](scripts/nisl) script lists all shortcuts in a formatted table showing the short path, target URL, and hit count. By default it displays 50 characters of the target URL, but this can be customised by passing a limit parameter, or `all` to display the full URL.
 
+`nisl hits` lists how often each of the book's links has been used: the printed `hi-<slug>` links (source `link`) and the QR-only codes `q01`…`q99` (source `qr`, mapped to slugs by the book's `links.json`). `nisl hits <slug-or-code>` breaks one down by day and country (HAND-22). It reads the `shortener` database on Luke's Postgres (home-infra), so it needs the home LAN and `psql`; set `SHORTENER_DATABASE_URL` to override the connection.
+
 The [nisd](scripts/nisd) script deletes a shortcut by its short path (`nisd shortUrl`), removing the entry directly from the DynamoDB table.
 
 

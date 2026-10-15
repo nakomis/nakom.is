@@ -1,7 +1,23 @@
+import { randomUUID } from 'crypto';
+
 export interface RedirectResponse {
     statusCode: number;
     headers: Record<string, string>;
 }
+
+/**
+ * What a resolver may know about the request beyond its path. Only the
+ * short-link resolver reads it (for hit events on `hi-` links, HAND-22);
+ * every other resolver ignores it.
+ */
+export interface ShortenerRequest {
+    /** Request headers as API Gateway passed them on. Look them up case-insensitively. */
+    headers: Record<string, string | undefined>;
+    /** API Gateway's request id, or a random UUID when there isn't one. */
+    requestId: string;
+}
+
+export const emptyRequest = (): ShortenerRequest => ({ headers: {}, requestId: randomUUID() });
 
 /**
  * A resolver turns a request path into a response.
@@ -17,7 +33,7 @@ export interface RedirectResponse {
 export interface Resolver<M> {
     name: string;
     match(path: string): M | null;
-    resolve(match: M): Promise<RedirectResponse | null>;
+    resolve(match: M, request: ShortenerRequest): Promise<RedirectResponse | null>;
 }
 
 export type AnyResolver = Resolver<any>;
@@ -30,13 +46,17 @@ export function redirect(location: string, cacheControl?: string, statusCode = 3
     return { statusCode, headers };
 }
 
-export async function runChain(path: string, resolvers: AnyResolver[]): Promise<RedirectResponse> {
+export async function runChain(
+    path: string,
+    resolvers: AnyResolver[],
+    request: ShortenerRequest = emptyRequest(),
+): Promise<RedirectResponse> {
     for (const resolver of resolvers) {
         const match = resolver.match(path);
         if (match === null) {
             continue;
         }
-        const response = await resolver.resolve(match);
+        const response = await resolver.resolve(match, request);
         if (response) {
             return response;
         }

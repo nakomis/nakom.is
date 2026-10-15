@@ -9,6 +9,17 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { DeployEnv, envSuffix, ssmPrefix } from './deploy-env';
 
+/**
+ * The book's counted links (HAND-22) in every casing, because CloudFront
+ * matches paths case-sensitively: `hi-<slug>`, and the QR-only codes `Q01` to
+ * `Q99`. `?` matches exactly one character, so `q??` is any three-character
+ * path starting with q; the Lambda decides which of those are Q-codes
+ * (`q` and two digits). The rest are ordinary links that merely lose
+ * CloudFront caching, which the Lambda's own max-age=600 still covers for
+ * browsers.
+ */
+export const HIT_PATH_PATTERNS = ['hi-*', 'HI-*', 'Hi-*', 'hI-*', 'q??', 'Q??'] as const;
+
 export interface CloudfrontStackProps extends cdk.StackProps {
     gateway: api.RestApiBase,
     certificate: cm.Certificate,
@@ -107,6 +118,54 @@ function handler(event) {
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
             },
         };
+
+        // Hit-counted book links, nakom.is/hi-<slug> and nakom.is/Q01 (HAND-22). The Lambda
+        // derives coarse, non-identifying fields for each hit (country, device,
+        // language, OS and browser families) from these headers, which reach the
+        // origin only if a policy forwards them. Scoped to this one behaviour, so
+        // caching and headers for every other path are unchanged. The viewer's
+        // IP is not forwarded, and the Lambda reduces User-Agent to two coarse
+        // families and drops it. Host is not forwarded either: API Gateway needs
+        // its own.
+        const hitHeadersPolicy = new cloudfront.OriginRequestPolicy(this, 'HitLinkHeadersPolicy', {
+            originRequestPolicyName: `nakomis-hit-link-headers${suffix}`,
+            comment: 'hi-* and Q-code short links: forward viewer geo/device headers, Accept-Language and User-Agent',
+            headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
+                'CloudFront-Viewer-Country',
+                'CloudFront-Viewer-Country-Region',
+                'CloudFront-Viewer-City',
+                'CloudFront-Is-Mobile-Viewer',
+                'CloudFront-Is-Tablet-Viewer',
+                'CloudFront-Is-Desktop-Viewer',
+                'CloudFront-Is-SmartTV-Viewer',
+                'Accept-Language',
+                'User-Agent',
+            ),
+            queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.none(),
+            cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
+        });
+        // One behaviour for every pattern in HIT_PATH_PATTERNS (see there).
+        const hitBehaviour: cloudfront.BehaviorOptions = {
+            origin: apiOrigin,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+            // Every hit must reach the Lambda. The Lambda also says no-store, but
+            // the default behaviour's managed CachingOptimized policy has a
+            // minimum TTL of one second, which would override that.
+            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+            originRequestPolicy: hitHeadersPolicy,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            // The same viewer-request function as the default behaviour, so
+            // nakomis.com/hi-… still goes to the blog exactly as before.
+            functionAssociations: [
+                {
+                    function: socialRedirectFunction,
+                    eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+                },
+            ],
+        };
+        for (const pattern of HIT_PATH_PATTERNS) {
+            additionalBehaviors[pattern] = hitBehaviour;
+        }
 
         // Paths that must bypass the default behaviour's viewer-request redirect.
         // The default behaviour sends every nakomis.com/www.nakomis.com request to

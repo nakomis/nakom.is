@@ -6,6 +6,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import * as rolesanywhere from 'aws-cdk-lib/aws-rolesanywhere';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 import { DeployEnv, envSuffix, logPrefix, ssmPrefix } from './deploy-env';
@@ -31,6 +32,14 @@ export class LambdaStack extends cdk.Stack {
     readonly redirectsFunctionAlias: lambda.Alias;
     readonly redirectTable: dynamodb.TableV2;
     readonly ticketProjectsTable: dynamodb.TableV2;
+    readonly hitsQueue: sqs.Queue;
+    readonly hitsDeadLetterQueue: sqs.Queue;
+
+    /**
+     * CN of the certificate the hit consumer on Cal presents (HAND-22). Issued
+     * by the home cert portal, which publishes it to SSM for Cal's playbook.
+     */
+    static readonly HITS_CONSUMER_CN = 'shortener-hits-consumer';
 
     constructor(scope: Construct, id: string, props: LambdaStackProps) {
         super(scope, id, props);
@@ -49,6 +58,35 @@ export class LambdaStack extends cdk.Stack {
         this.ticketProjectsTable = new dynamodb.TableV2(this, 'TicketProjects', {
             tableName: `ticket-projects${suffix}`,
             partitionKey: { name: 'alias', type: dynamodb.AttributeType.STRING },
+        });
+
+        // Hit events for `hi-` links (HAND-22): the Lambda sends one message per
+        // hit, and a consumer on Cal (home-infra) drains them into Postgres at
+        // home. Standard, not FIFO: delivery is at-least-once and the consumer
+        // is idempotent on requestId, and order does not matter (each event
+        // carries its own timestamp). Retained, so a deploy can never drop
+        // hits that have not been drained yet.
+        this.hitsDeadLetterQueue = new sqs.Queue(this, 'ShortenerHitsDlq', {
+            queueName: `nakomis-shortener-hits-dlq${suffix}`,
+            encryption: sqs.QueueEncryption.SQS_MANAGED,
+            enforceSSL: true,
+            retentionPeriod: Duration.days(14),
+            removalPolicy: cdk.RemovalPolicy.RETAIN,
+        });
+        this.hitsQueue = new sqs.Queue(this, 'ShortenerHits', {
+            queueName: `nakomis-shortener-hits${suffix}`,
+            encryption: sqs.QueueEncryption.SQS_MANAGED,
+            enforceSSL: true,
+            // A fortnight, like conversation-memory's queue: the house being
+            // offline for a while must delay hits, not lose them.
+            retentionPeriod: Duration.days(14),
+            // The consumer inserts a batch in one statement, so a minute is
+            // ample before an unacknowledged batch comes round again.
+            visibilityTimeout: Duration.seconds(60),
+            // Long polling keeps an idle consumer inside the free tier.
+            receiveMessageWaitTime: Duration.seconds(20),
+            deadLetterQueue: { queue: this.hitsDeadLetterQueue, maxReceiveCount: 5 },
+            removalPolicy: cdk.RemovalPolicy.RETAIN,
         });
 
         // Create a CloudWatch Log Group for storing access logs
@@ -72,6 +110,7 @@ export class LambdaStack extends cdk.Stack {
                 // which ones to use rather than hardcoding the production names.
                 REDIRECTS_TABLE: this.redirectTable.tableName,
                 TICKET_PROJECTS_TABLE: this.ticketProjectsTable.tableName,
+                HITS_QUEUE_URL: this.hitsQueue.queueUrl,
             },
             bundling: {
                 minify: true,
@@ -87,6 +126,10 @@ export class LambdaStack extends cdk.Stack {
 
         this.redirectTable.grant(this.redirectsFunction, "dynamodb:UpdateItem");
         this.ticketProjectsTable.grant(this.redirectsFunction, "dynamodb:GetItem");
+        // Send only. The Lambda can neither read back nor delete what it sent.
+        this.hitsQueue.grant(this.redirectsFunction, 'sqs:SendMessage');
+
+        this.addHitsConsumerRole(props.deployEnv);
 
         for (const identity of LambdaStack.PLANE_MCP_IDENTITIES) {
             this.addPlaneMcpSyncRole(props.deployEnv, identity);
@@ -173,6 +216,72 @@ export class LambdaStack extends cdk.Stack {
         for (const [name, value] of Object.entries(params)) {
             new ssm.StringParameter(this, `${id}Param${name.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`, {
                 parameterName: `${ssmPrefix(deployEnv)}${cn}/${name}`,
+                stringValue: value,
+            });
+        }
+    }
+
+    /**
+     * The hit consumer on Cal (HAND-22, home-infra `cal/shortener-hits-consumer`).
+     *
+     * Same shape as the Plane MCP roles above and conversation-memory's
+     * consumer: IAM Roles Anywhere with a home-CA certificate, pinned by CN,
+     * so no long-lived AWS key lives at home. Receive and delete only (plus
+     * ChangeMessageVisibility, to bring a failed batch round again sooner); it
+     * cannot send, so it cannot fabricate hits.
+     */
+    private addHitsConsumerRole(deployEnv: DeployEnv) {
+        const cn = LambdaStack.HITS_CONSUMER_CN;
+        const name = `${cn}${envSuffix(deployEnv)}`;
+        const trustAnchorArn = `{{resolve:ssm:/conversation-memory/${deployEnv}/trust-anchor-arn}}`;
+
+        const role = new iam.Role(this, 'HitsConsumerRole', {
+            roleName: name,
+            description: 'Cal: drain the shortener hit queue into Postgres at home (receive/delete only)',
+            assumedBy: new iam.ServicePrincipal('rolesanywhere.amazonaws.com', {
+                conditions: {
+                    ArnEquals: { 'aws:SourceArn': trustAnchorArn },
+                    StringEquals: { 'aws:PrincipalTag/x509Subject/CN': cn },
+                },
+            }),
+            maxSessionDuration: Duration.hours(1),
+        });
+        // As for the Plane MCP roles: the CN condition is deliberately absent
+        // here, because the tag it tests is populated by this very call.
+        role.assumeRolePolicy?.addStatements(new iam.PolicyStatement({
+            actions: ['sts:TagSession', 'sts:SetSourceIdentity'],
+            principals: [new iam.ServicePrincipal('rolesanywhere.amazonaws.com')],
+            conditions: { ArnEquals: { 'aws:SourceArn': trustAnchorArn } },
+        }));
+        this.hitsQueue.grant(role,
+            'sqs:ReceiveMessage',
+            'sqs:DeleteMessage',
+            'sqs:ChangeMessageVisibility',
+            'sqs:GetQueueAttributes',
+        );
+
+        const profile = new rolesanywhere.CfnProfile(this, 'HitsConsumerProfile', {
+            name,
+            enabled: true,
+            roleArns: [role.roleArn],
+            durationSeconds: Duration.hours(1).toSeconds(),
+        });
+
+        // Read by Cal's playbook, so nothing about the queue or the role is
+        // written down in home-infra.
+        const params: Record<string, string> = {
+            'queue-url': this.hitsQueue.queueUrl,
+            'queue-arn': this.hitsQueue.queueArn,
+            'dlq-url': this.hitsDeadLetterQueue.queueUrl,
+            'dlq-arn': this.hitsDeadLetterQueue.queueArn,
+            'consumer-role-arn': role.roleArn,
+            'consumer-profile-arn': profile.attrProfileArn,
+            'trust-anchor-arn': trustAnchorArn,
+            'consumer-cn': cn,
+        };
+        for (const [param, value] of Object.entries(params)) {
+            new ssm.StringParameter(this, `HitsParam${param.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`, {
+                parameterName: `${ssmPrefix(deployEnv)}shortener-hits/${param}`,
                 stringValue: value,
             });
         }

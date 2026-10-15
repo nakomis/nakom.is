@@ -1,9 +1,12 @@
 import { ConditionalCheckFailedException, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { handle } from './handler';
+import { HitSink, sqsHitSink } from './hits';
 import { AnyResolver } from './resolver';
 import { catResolver } from './resolvers/cat';
 import { googleResolver } from './resolvers/google';
-import { DynamoSender, shortLinkResolver } from './resolvers/short-link';
+import { imdbResolver } from './resolvers/imdb';
+import { DynamoSender, matchShortLink, shortLinkResolver } from './resolvers/short-link';
+import { ticketResolver } from './resolvers/tickets';
 
 function fakeTable(links: Record<string, string>) {
     const commands: UpdateItemCommand[] = [];
@@ -114,5 +117,183 @@ describe('shortener handler', () => {
         const client = { send: jest.fn().mockRejectedValue(new Error('throttled')) } as unknown as DynamoSender;
         const chain = [catResolver, shortLinkResolver(client, 'redirects'), googleResolver];
         await expect(handle(at('hn'), chain)).rejects.toThrow('throttled');
+    });
+});
+
+// HAND-22: the book's hi- links and Q-codes are uncached and publish one hit event per visit.
+describe('hi- links', () => {
+    const CLOUDFRONT_HEADERS = {
+        'CloudFront-Viewer-Country': 'GB',
+        'CloudFront-Viewer-Country-Region': 'EDH',
+        'CloudFront-Viewer-City': 'Edinburgh',
+        'CloudFront-Is-Mobile-Viewer': 'true',
+        'CloudFront-Is-Tablet-Viewer': 'false',
+        'CloudFront-Is-Desktop-Viewer': 'false',
+        'CloudFront-Is-SmartTV-Viewer': 'false',
+        'Accept-Language': 'en-GB,en;q=0.9',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+        'X-Forwarded-For': '203.0.113.7',
+    };
+
+    function hiChain(links: Record<string, string>, sink: HitSink = jest.fn(async () => undefined)) {
+        const table = fakeTable(links);
+        // The full production order, so a namespace resolver swallowing a counted path would show up here.
+        const chain: AnyResolver[] = [
+            catResolver,
+            imdbResolver(jest.fn() as any),
+            ticketResolver(table.client, 'ticket-projects'),
+            shortLinkResolver(table.client, 'redirects', sink),
+            googleResolver,
+        ];
+        return { chain, sink, ...table };
+    }
+
+    const event = (shortPath: string, headers: Record<string, string> = CLOUDFRONT_HEADERS) =>
+        ({ pathParameters: { shortPath }, headers, requestContext: { requestId: 'req-1' } });
+
+    test('typed link → 302 no-store, one event with source "link"', async () => {
+        const { chain, sink, commands } = hiChain({ 'hi-fig-1-2': 'https://youtu.be/abc' });
+        await expect(handle(event('hi-fig-1-2'), chain)).resolves.toEqual({
+            statusCode: 302,
+            headers: { Location: 'https://youtu.be/abc', 'Cache-Control': 'no-store' },
+        });
+        expect(commands).toHaveLength(1);
+        expect(commands[0].input).toMatchObject({
+            Key: { shortPath: { S: 'hi-fig-1-2' } },
+            UpdateExpression: 'ADD hitCount :one',
+            ConditionExpression: 'attribute_exists(shortPath)',
+        });
+        expect(sink).toHaveBeenCalledTimes(1);
+        expect((sink as jest.Mock).mock.calls[0][0]).toEqual({
+            shortPath: 'hi-fig-1-2',
+            at: expect.stringMatching(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/),
+            requestId: 'req-1',
+            source: 'link',
+            country: 'GB',
+            region: 'EDH',
+            city: 'Edinburgh',
+            device: 'mobile',
+            lang: 'en-GB',
+            os: 'iOS',
+            browser: 'Safari',
+        });
+    });
+
+    test.each(['Q01', 'q01'])('QR-only code %s → lower-case row q01, 302 no-store, source "qr"', async (path) => {
+        const { chain, sink, commands } = hiChain({ q01: 'https://youtu.be/abc' });
+        await expect(handle(event(path), chain)).resolves.toEqual({
+            statusCode: 302,
+            headers: { Location: 'https://youtu.be/abc', 'Cache-Control': 'no-store' },
+        });
+        expect(commands).toHaveLength(1);
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'q01' } });
+        expect(sink).toHaveBeenCalledTimes(1);
+        expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'q01', source: 'qr' });
+    });
+
+    test.each(['hi-pythagoras', 'Hi-Pythagoras', 'HI-PYTHAGORAS', 'hI-pYTHAGORAS'])(
+        'typed link %s → lower-case row, 302 no-store, source "link"',
+        async (path) => {
+            const { chain, sink, commands } = hiChain({ 'hi-pythagoras': 'https://youtu.be/abc' });
+            await expect(handle(event(path), chain)).resolves.toEqual({
+                statusCode: 302,
+                headers: { Location: 'https://youtu.be/abc', 'Cache-Control': 'no-store' },
+            });
+            expect(commands[0].input.Key).toEqual({ shortPath: { S: 'hi-pythagoras' } });
+            expect((sink as jest.Mock).mock.calls[0][0]).toMatchObject({ shortPath: 'hi-pythagoras', source: 'link' });
+        },
+    );
+
+    test.each(['q1', 'q001', 'Q1', 'Q001', 'q0a', 'qa1'])('%s is not a Q-code: an ordinary link, case kept', async (path) => {
+        const { chain, sink, commands } = hiChain({ [path]: 'https://example.com' });
+        await expect(handle(event(path), chain)).resolves.toEqual({
+            statusCode: 301,
+            headers: { Location: 'https://example.com', 'Cache-Control': 'max-age=600' },
+        });
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: path } });
+        expect(sink).not.toHaveBeenCalled();
+    });
+
+    test('ordinary links keep their case', async () => {
+        const { chain, sink, commands } = hiChain({ HN: 'https://news.ycombinator.com' });
+        await expect(handle(event('HN'), chain)).resolves.toMatchObject({ statusCode: 301 });
+        expect(commands[0].input.Key).toEqual({ shortPath: { S: 'HN' } });
+        expect(sink).not.toHaveBeenCalled();
+    });
+
+    test('never puts the IP or the raw User-Agent in the event', async () => {
+        const { chain, sink } = hiChain({ 'hi-x': 'example.com' });
+        await handle(event('hi-x'), chain);
+        const body = JSON.stringify((sink as jest.Mock).mock.calls[0][0]);
+        expect(body).not.toContain('203.0.113.7');
+        expect(body).not.toContain('Mozilla');
+        expect(body).not.toContain('AppleWebKit');
+    });
+
+    test('without CloudFront headers every derived field is null', async () => {
+        const { chain, sink } = hiChain({ 'hi-x': 'example.com' });
+        await handle({ pathParameters: { shortPath: 'hi-x' } }, chain);
+        const hit = (sink as jest.Mock).mock.calls[0][0];
+        expect(hit).toMatchObject({
+            shortPath: 'hi-x', source: 'link',
+            country: null, region: null, city: null, device: null, lang: null, os: null, browser: null,
+        });
+        expect(hit.requestId).toEqual(expect.any(String));
+    });
+
+    test('an SQS failure still redirects', async () => {
+        const sqs = { send: jest.fn().mockRejectedValue(new Error('AccessDenied')) };
+        const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        const { chain } = hiChain({ 'hi-x': 'example.com' }, sqsHitSink(sqs, 'https://sqs.example/q'));
+        await expect(handle(event('hi-x'), chain)).resolves.toEqual({
+            statusCode: 302,
+            headers: { Location: 'https://example.com', 'Cache-Control': 'no-store' },
+        });
+        expect(sqs.send).toHaveBeenCalledTimes(1);
+        expect(error).toHaveBeenCalledWith(expect.stringContaining('AccessDenied'));
+    });
+
+    test('a hung SQS call is abandoned after the timeout and the redirect carries on', async () => {
+        const sqs = {
+            send: jest.fn((_cmd: unknown, opts: { abortSignal: AbortSignal }) => new Promise((_, reject) => {
+                opts.abortSignal.addEventListener('abort', () => reject(new Error('aborted')));
+            })),
+        };
+        const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        const { chain } = hiChain({ 'hi-x': 'example.com' }, sqsHitSink(sqs as any, 'https://sqs.example/q', 20));
+        const started = Date.now();
+        await expect(handle(event('hi-x'), chain)).resolves.toMatchObject({ statusCode: 302 });
+        expect(Date.now() - started).toBeLessThan(1000);
+        expect(error).toHaveBeenCalledWith(expect.stringContaining('timed out after 20 ms'));
+    });
+
+    test('unknown hi- link → no event, falls through to Google as before', async () => {
+        const { chain, sink } = hiChain({});
+        await expect(handle(event('hi-nope'), chain)).resolves.toMatchObject({ statusCode: 301 });
+        expect(sink).not.toHaveBeenCalled();
+    });
+
+    test('ordinary links are unchanged: 301, max-age=600, no event', async () => {
+        const { chain, sink } = hiChain({ hn: 'https://news.ycombinator.com', hiking: 'example.com' });
+        await expect(handle(event('hn'), chain)).resolves.toEqual({
+            statusCode: 301,
+            headers: { Location: 'https://news.ycombinator.com', 'Cache-Control': 'max-age=600' },
+        });
+        // Starts with "hi" but not "hi-".
+        await expect(handle(event('hiking'), chain)).resolves.toMatchObject({ statusCode: 301 });
+        expect(sink).not.toHaveBeenCalled();
+    });
+
+    test('a bare "hi-" is an ordinary link, not a counted one', () => {
+        expect(matchShortLink('hi-')).toEqual({ shortPath: 'hi-' });
+        expect(matchShortLink('HI-')).toEqual({ shortPath: 'HI-' });
+    });
+
+    test('namespace resolvers do not claim counted paths', () => {
+        for (const path of ['hi-x', 'HI-X', 'Hi-X', 'q01', 'Q01']) {
+            expect(imdbResolver(jest.fn() as any).match(path)).toBeNull();
+            expect(ticketResolver({ send: jest.fn() } as any, 't').match(path)).toBeNull();
+            expect(catResolver.match(path)).toBeNull();
+        }
     });
 });

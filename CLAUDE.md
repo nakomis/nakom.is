@@ -60,6 +60,14 @@ AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
 - Resolvers that own a namespace match a `word/` prefix (e.g. `plane/`, `imdb/`). Short links in the `redirects` table must never contain a `/`, so the two can't collide.
 - `plane/<alias> <ref>` (and the legacy `taiga/` prefix) uses the `ticket-projects` table (`alias` → `urlTemplate` with `{ref}`, plus `projectUrl` for `plane/<alias>` with no ref). The rows are data: edit them directly rather than redeploying. A new Plane project's row is written by the Plane MCP when it creates the project, and its `sync_shortener_projects` tool upserts every project (archived included) to backfill or recover. `scripts/seed-ticket-projects.sh` only writes the hand-picked extra aliases (`nako`, `nest`, `lapcat`, …), which Plane knows nothing about. The Lambda never calls Plane: the URLs are static, so no API key or client certificate lives in AWS.
 
+### The book's counted links (HAND-22)
+
+- Two kinds of path are counted: `hi-<slug>` (printed in the book, source `link`) and the QR-only codes `q01`…`q99` (exactly two digits, source `qr`; the QR codes encode `HTTPS://NAKOM.IS/Q01` because alphanumeric mode makes the smallest grid). Both are **case-insensitive**: lower-cased before the lookup, so their `redirects` rows must be stored in lower case. Each Q-code is an ordinary row pointing at the same URL as its `hi-` link; the book's `links.json` maps Q-numbers to slugs. `q1`, `q001` and every other path keep their case and behave exactly as before.
+- Counted links return **302 with `no-store`** (ordinary links stay 301 / `max-age=600`) and publish one hit event to SQS `nakomis-shortener-hits` (`lambda/shortener/hits.ts`), with `shortPath` the lower-cased path. The send is bounded (500 ms, one attempt) and a failure only logs: it must never break or slow the redirect.
+- The event holds derived fields only (geo, device, language, OS/browser family). **Never add the IP or the raw User-Agent.**
+- CloudFront has an uncached behaviour, with the only origin request policy (the viewer headers the event is built from), for each pattern in `HIT_PATH_PATTERNS`: every casing of `hi-*`, plus `q??`/`Q??`.
+- The consumer that drains the queue into `shortener.hits` on Luke's Postgres lives in home-infra (`cal/shortener-hits-consumer`). Its Roles Anywhere role and the `/nakom.is/shortener-hits/*` parameters it reads are created here, in `LambdaStack`. `nisl hits [slug]` reads the views.
+
 ## Blog RAG search
 
 The chat assistant and blog search UI use semantic search over blog posts.
