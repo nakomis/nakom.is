@@ -108,6 +108,50 @@ function handler(event) {
             },
         };
 
+        // Hit-counted book links, nakom.is/hi-<slug>[/q] (HAND-22). The Lambda
+        // derives coarse, non-identifying fields for each hit (country, device,
+        // language, OS and browser families) from these headers, which reach the
+        // origin only if a policy forwards them. Scoped to this one behaviour, so
+        // caching and headers for every other path are unchanged. The viewer's
+        // IP is not forwarded, and the Lambda reduces User-Agent to two coarse
+        // families and drops it. Host is not forwarded either: API Gateway needs
+        // its own.
+        const hitHeadersPolicy = new cloudfront.OriginRequestPolicy(this, 'HitLinkHeadersPolicy', {
+            originRequestPolicyName: `nakomis-hit-link-headers${suffix}`,
+            comment: 'hi-* short links: forward viewer geo/device headers, Accept-Language and User-Agent',
+            headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
+                'CloudFront-Viewer-Country',
+                'CloudFront-Viewer-Country-Region',
+                'CloudFront-Viewer-City',
+                'CloudFront-Is-Mobile-Viewer',
+                'CloudFront-Is-Tablet-Viewer',
+                'CloudFront-Is-Desktop-Viewer',
+                'CloudFront-Is-SmartTV-Viewer',
+                'Accept-Language',
+                'User-Agent',
+            ),
+            queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.none(),
+            cookieBehavior: cloudfront.OriginRequestCookieBehavior.none(),
+        });
+        additionalBehaviors['hi-*'] = {
+            origin: apiOrigin,
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+            // Every hit must reach the Lambda. The Lambda also says no-store, but
+            // the default behaviour's managed CachingOptimized policy has a
+            // minimum TTL of one second, which would override that.
+            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+            originRequestPolicy: hitHeadersPolicy,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            // The same viewer-request function as the default behaviour, so
+            // nakomis.com/hi-… still goes to the blog exactly as before.
+            functionAssociations: [
+                {
+                    function: socialRedirectFunction,
+                    eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+                },
+            ],
+        };
+
         // Paths that must bypass the default behaviour's viewer-request redirect.
         // The default behaviour sends every nakomis.com/www.nakomis.com request to
         // blog.nakomis.com, so any file that has to be served from nakomis.com itself

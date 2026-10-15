@@ -101,3 +101,49 @@ describe('CloudFront redirect bypass behaviours', () => {
         });
     });
 });
+
+// HAND-22: hi-* links are uncached and get the viewer headers the hit event is built from.
+describe('CloudFront hi-* behaviour', () => {
+    describe.each(['prod', 'sandbox'] as DeployEnv[])('%s', (deployEnv) => {
+        const template = synth(deployEnv);
+        const hi = () => behaviours(template).find(b => b.PathPattern === 'hi-*');
+
+        it('sends hi-* to the API Gateway origin, uncached, with the redirect function kept', () => {
+            const behaviour = hi();
+            expect(behaviour).toBeDefined();
+            expect(behaviour.TargetOriginId).toBe('NakomIsApiOrigin');
+            expect(behaviour.CachePolicyId).toBe('4135ea2d-6df8-44a3-9df3-4b5a84be39ad');
+            expect(behaviour.AllowedMethods).toEqual(['GET', 'HEAD']);
+            expect(behaviour.FunctionAssociations).toEqual([
+                expect.objectContaining({ EventType: 'viewer-request' }),
+            ]);
+            expect(behaviour.OriginRequestPolicyId).toEqual({ Ref: expect.stringMatching(/^HitLinkHeadersPolicy/) });
+        });
+
+        it('forwards only the derived-field headers: no Host, no cookies, no query string', () => {
+            const [policy] = Object.values(template.findResources('AWS::CloudFront::OriginRequestPolicy')) as any[];
+            const config = policy.Properties.OriginRequestPolicyConfig;
+            expect(config.HeadersConfig.HeaderBehavior).toBe('whitelist');
+            expect([...config.HeadersConfig.Headers].sort()).toEqual([
+                'Accept-Language',
+                'CloudFront-Is-Desktop-Viewer',
+                'CloudFront-Is-Mobile-Viewer',
+                'CloudFront-Is-SmartTV-Viewer',
+                'CloudFront-Is-Tablet-Viewer',
+                'CloudFront-Viewer-City',
+                'CloudFront-Viewer-Country',
+                'CloudFront-Viewer-Country-Region',
+                'User-Agent',
+            ]);
+            expect(config.CookiesConfig.CookieBehavior).toBe('none');
+            expect(config.QueryStringsConfig.QueryStringBehavior).toBe('none');
+        });
+
+        it('leaves the default behaviour without an origin request policy', () => {
+            const [distribution] = Object.values(template.findResources('AWS::CloudFront::Distribution')) as any[];
+            const def = distribution.Properties.DistributionConfig.DefaultCacheBehavior;
+            expect(def.OriginRequestPolicyId).toBeUndefined();
+            expect(def.CachePolicyId).toBe('658327ea-f89d-4fab-a63d-7e88639e58f6');
+        });
+    });
+});

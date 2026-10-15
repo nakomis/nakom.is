@@ -60,6 +60,13 @@ AWS_PROFILE=nakom.is-admin aws ssm put-parameter \
 - Resolvers that own a namespace match a `word/` prefix (e.g. `plane/`, `imdb/`). Short links in the `redirects` table must never contain a `/`, so the two can't collide.
 - `plane/<alias> <ref>` (and the legacy `taiga/` prefix) uses the `ticket-projects` table (`alias` → `urlTemplate` with `{ref}`, plus `projectUrl` for `plane/<alias>` with no ref). The rows are data: edit them directly rather than redeploying. A new Plane project's row is written by the Plane MCP when it creates the project, and its `sync_shortener_projects` tool upserts every project (archived included) to backfill or recover. `scripts/seed-ticket-projects.sh` only writes the hand-picked extra aliases (`nako`, `nest`, `lapcat`, …), which Plane knows nothing about. The Lambda never calls Plane: the URLs are static, so no API key or client certificate lives in AWS.
 
+### `hi-` links (the book's figures, HAND-22)
+
+- `hi-<slug>` and `hi-<slug>/q` (the QR form) resolve to the same `redirects` row, return **302 with `no-store`** (ordinary links stay 301 / `max-age=600`), and publish one hit event to SQS `nakomis-shortener-hits` (`lambda/shortener/hits.ts`). The send is bounded (500 ms, one attempt) and a failure only logs: it must never break or slow the redirect.
+- The event holds derived fields only (geo, device, language, OS/browser family). **Never add the IP or the raw User-Agent.**
+- CloudFront's `hi-*` behaviour is uncached and is the only one with an origin request policy (the viewer headers the event is built from).
+- The consumer that drains the queue into `shortener.hits` on Luke's Postgres lives in home-infra (`cal/shortener-hits-consumer`). Its Roles Anywhere role and the `/nakom.is/shortener-hits/*` parameters it reads are created here, in `LambdaStack`.
+
 ## Blog RAG search
 
 The chat assistant and blog search UI use semantic search over blog posts.
