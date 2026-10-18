@@ -1,4 +1,4 @@
-import { buildLogEntry } from './chat-logger';
+import { buildLogEntry, obfuscateIP } from './chat-logger';
 
 describe('buildLogEntry', () => {
   const baseEvent = {
@@ -10,7 +10,7 @@ describe('buildLogEntry', () => {
     requestContext: {},
   };
 
-  it('extracts the first IP from X-Forwarded-For without obfuscation', () => {
+  it('stores the /24 of the first IP in X-Forwarded-For', () => {
     const entry = buildLogEntry({
       event: baseEvent,
       conversationId: 'conv-123',
@@ -23,7 +23,7 @@ describe('buildLogEntry', () => {
       rateLimited: false,
     });
 
-    expect(entry.ip).toBe('203.0.113.42');
+    expect(entry.ip).toBe('203.0.113.0/24');
     expect(entry.logType).toBe('CVCHAT');
     expect(entry.userMessage).toBe('Hello');
     expect(entry.toolsCalled).toEqual(new Set(['get_cv']));
@@ -36,6 +36,7 @@ describe('buildLogEntry', () => {
       messageCount: 1, toolsCalled: [], inputTokens: 0, outputTokens: 0,
       durationMs: 0, rateLimited: false });
     expect(entry.ip).toBe('unknown');
+    expect(entry.userAgent).toBe('unknown / unknown');
   });
 
   it('sets ttl to approximately 1 year from now', () => {
@@ -69,10 +70,40 @@ describe('buildLogEntry', () => {
       rateLimited: false,
     });
 
-    expect(entry.ip).toBe('192.168.1.100');
+    expect(entry.ip).toBe('192.168.1.0/24');
     expect(entry.userMessage).toContain('joh***@***.com'); // Email obfuscated
     expect(entry.userMessage).toContain('***-***-4567'); // Phone obfuscated
     expect(entry.userMessage).toContain('John Smith'); // Names NOT obfuscated
-    expect(entry.userAgent).toBe('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'); // User agent NOT obfuscated
+    expect(entry.userAgent).toBe('Windows / other'); // Only coarse families kept
+  });
+
+  it('reduces the User-Agent to OS and browser families', () => {
+    const event = {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+      },
+    };
+    const entry = buildLogEntry({ event, conversationId: 'c', userMessage: 'm',
+      messageCount: 1, toolsCalled: [], inputTokens: 0, outputTokens: 0,
+      durationMs: 0, rateLimited: false });
+    expect(entry.userAgent).toBe('iOS / Safari');
+  });
+});
+
+describe('obfuscateIP', () => {
+  it.each([
+    ['203.0.113.42', '203.0.113.0/24'],
+    ['10.0.0.1', '10.0.0.0/24'],
+    ['::ffff:198.51.100.7', '198.51.100.0/24'],
+    ['2001:db8:85a3:8d3:1319:8a2e:370:7348', '2001:db8:85a3::/48'],
+    ['2001:0DB8:0000:0000:0000:0000:0000:0001', '2001:db8:0::/48'],
+    ['2001:db8::1', '2001:db8:0::/48'],
+    ['fe80::1%eth0', 'fe80:0:0::/48'],
+    ['unknown', 'unknown'],
+    ['999.1.1.1', 'unknown'],
+    ['not-an-ip', 'unknown'],
+    ['1:2:3', 'unknown'],
+  ])('%s → %s', (ip, expected) => {
+    expect(obfuscateIP(ip)).toBe(expected);
   });
 });
