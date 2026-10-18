@@ -10,7 +10,7 @@ import { checkRateLimit } from './rate-limiter';
 import { fetchGitHubRepos } from './github';
 import { buildSystemPrompt } from './system-prompt';
 import { TOOLS } from './tools';
-import { buildLogEntry, writeLogEntry } from './chat-logger';
+import { buildLogEntry, writeLogEntry, summariseEventForLog } from './chat-logger';
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import { runOnTopicGate } from './relevance/gate';
 
@@ -145,7 +145,7 @@ interface ChatRequestBody {
 // --- Main streaming handler ---
 export const handler = awslambda.streamifyResponse(
   async (event: any, responseStream: awslambda.ResponseStream, _context: any) => {
-    console.log('Stream handler invoked with event:', JSON.stringify(event, null, 2));
+    console.log('Stream handler invoked with event:', JSON.stringify(summariseEventForLog(event)));
     responseStream.setContentType('text/event-stream');
 
     try {

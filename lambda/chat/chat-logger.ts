@@ -1,29 +1,54 @@
 import { DynamoDBClient, PutItemCommand } from '@aws-sdk/client-dynamodb';
 import { randomUUID } from 'crypto';
+import { parseUserAgent } from '../shortener/hits';
 
 const dynamoClient = new DynamoDBClient({});
 
 // PII obfuscation functions
-function obfuscateIP(ip: string): string {
+
+const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+
+function ipv4Network(ip: string): string | null {
+  const m = IPV4.exec(ip);
+  if (!m || m.slice(1).some((octet) => Number(octet) > 255)) return null;
+  return `${Number(m[1])}.${Number(m[2])}.${Number(m[3])}.0/24`;
+}
+
+/** The first three hextets of an IPv6 address, with `::` expanded, or null if it isn't one. */
+function ipv6Prefix(ip: string): string[] | null {
+  const halves = ip.split('::');
+  if (halves.length > 2) return null;
+  const head = halves[0] ? halves[0].split(':') : [];
+  const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
+  const missing = 8 - head.length - tail.length;
+  if (halves.length === 1 ? missing !== 0 : missing < 1) return null;
+  const hextets = [...head, ...Array(Math.max(missing, 0)).fill('0'), ...tail];
+  if (!hextets.every((h) => /^[0-9a-f]{1,4}$/i.test(h))) return null;
+  return hextets.slice(0, 3).map((h) => parseInt(h, 16).toString(16));
+}
+
+/**
+ * Reduces the visitor's IP to its network (NAKIS-38): a /24 for IPv4 and a /48
+ * for IPv6, written as CIDR. Enough to group abusive traffic, not enough to
+ * identify a household. Anything unparseable is dropped.
+ */
+export function obfuscateIP(ip: string): string {
   if (ip === 'unknown') return ip;
 
-  // IPv4: 192.168.1.100 → 192.168.***.***
-  if (ip.includes('.')) {
-    const parts = ip.split('.');
-    if (parts.length === 4) {
-      return `${parts[0]}.${parts[1]}.***.***`;
-    }
+  const v4 = ipv4Network(ip);
+  if (v4) return v4;
+
+  // IPv4-mapped IPv6 (::ffff:203.0.113.42) is really an IPv4 address.
+  const mapped = /^::ffff:(.+)$/i.exec(ip);
+  if (mapped) {
+    const inner = ipv4Network(mapped[1]);
+    if (inner) return inner;
   }
 
-  // IPv6: 2001:db8::1 → 2001:db8::***
-  if (ip.includes(':')) {
-    const parts = ip.split(':');
-    if (parts.length >= 3) {
-      return `${parts[0]}:${parts[1]}::***`;
-    }
-  }
+  const v6 = ipv6Prefix(ip.split('%')[0]);
+  if (v6) return `${v6.join(':')}::/48`;
 
-  return '***';
+  return 'unknown';
 }
 
 function obfuscateEmail(email: string): string {
@@ -69,16 +94,6 @@ function obfuscateUserMessage(message: string): string {
   return obfuscated;
 }
 
-function obfuscateUserAgent(userAgent: string): string {
-  if (userAgent === 'unknown') return userAgent;
-
-  // Keep browser/OS info but remove version details that could be identifying
-  return userAgent
-    .replace(/\d+\.\d+(?:\.\d+)*/g, 'x.x.x') // Version numbers (2 or 3+ parts)
-    .replace(/[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}/ig, 'XXXX-XXXX') // UUIDs
-    .substring(0, 200); // Truncate very long UAs
-}
-
 export interface LogEntryInput {
   event: any;
   conversationId: string;
@@ -112,7 +127,8 @@ export function buildLogEntry(input: LogEntryInput): LogEntry {
   const headers = input.event?.headers ?? {};
   const forwarded: string = headers['x-forwarded-for'] ?? headers['X-Forwarded-For'] ?? '';
   const rawIP = forwarded.split(',')[0]?.trim() || 'unknown';
-  const rawUserAgent: string = headers['user-agent'] ?? headers['User-Agent'] ?? 'unknown';
+  // Reduced to coarse OS and browser families, as the HAND-22 hit events are; the raw string is not kept.
+  const { os, browser } = parseUserAgent(headers['user-agent'] ?? headers['User-Agent'] ?? null);
   const country: string = headers['cloudfront-viewer-country'] ?? headers['CloudFront-Viewer-Country'] ?? 'unknown';
 
   const now = new Date();
@@ -124,8 +140,8 @@ export function buildLogEntry(input: LogEntryInput): LogEntry {
     logType: 'CVCHAT',
     sk: `${timestamp}#${requestId}`,
     conversationId: input.conversationId,
-    ip: rawIP,
-    userAgent: rawUserAgent,
+    ip: obfuscateIP(rawIP),
+    userAgent: `${os ?? 'unknown'} / ${browser ?? 'unknown'}`,
     country,
     userMessage: obfuscateUserMessage(input.userMessage),
     messageCount: input.messageCount,
@@ -163,4 +179,18 @@ export async function writeLogEntry(entry: LogEntry, tableName: string): Promise
     TableName: tableName,
     Item: item,
   }));
+}
+/**
+ * Non-identifying summary of an incoming event, safe for CloudWatch.
+ * Deliberately omits headers, requestContext (sourceIp, identity) and the body
+ * content (which may hold a visitor's email address).
+ */
+export function summariseEventForLog(event: any): Record<string, unknown> {
+  const rawBody = typeof event?.body === 'string' ? event.body : '';
+  return {
+    method: event?.httpMethod ?? event?.requestContext?.http?.method,
+    path: event?.rawPath ?? event?.path,
+    isBase64Encoded: !!event?.isBase64Encoded,
+    bodyLength: rawBody.length,
+  };
 }
