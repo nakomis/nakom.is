@@ -180,3 +180,17 @@ export async function writeLogEntry(entry: LogEntry, tableName: string): Promise
     Item: item,
   }));
 }
+/**
+ * Non-identifying summary of an incoming event, safe for CloudWatch.
+ * Deliberately omits headers, requestContext (sourceIp, identity) and the body
+ * content (which may hold a visitor's email address).
+ */
+export function summariseEventForLog(event: any): Record<string, unknown> {
+  const rawBody = typeof event?.body === 'string' ? event.body : '';
+  return {
+    method: event?.httpMethod ?? event?.requestContext?.http?.method,
+    path: event?.rawPath ?? event?.path,
+    isBase64Encoded: !!event?.isBase64Encoded,
+    bodyLength: rawBody.length,
+  };
+}

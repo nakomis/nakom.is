@@ -1,4 +1,4 @@
-import { buildLogEntry, obfuscateIP } from './chat-logger';
+import { buildLogEntry, obfuscateIP, summariseEventForLog } from './chat-logger';
 
 describe('buildLogEntry', () => {
   const baseEvent = {
@@ -105,5 +105,27 @@ describe('obfuscateIP', () => {
     ['1:2:3', 'unknown'],
   ])('%s → %s', (ip, expected) => {
     expect(obfuscateIP(ip)).toBe(expected);
+  });
+});
+describe('summariseEventForLog', () => {
+  const event = {
+    httpMethod: 'POST',
+    path: '/chat',
+    isBase64Encoded: false,
+    body: JSON.stringify({ emailAddress: 'visitor@example.com', messages: [] }),
+    headers: {
+      'x-forwarded-for': '203.0.113.42, 10.0.0.1',
+      'user-agent': 'Mozilla/5.0 (Macintosh) Firefox/130.0',
+    },
+    requestContext: { identity: { sourceIp: '203.0.113.42', userAgent: 'Mozilla/5.0' } },
+  };
+
+  it('keeps only non-identifying fields', () => {
+    const out = JSON.stringify(summariseEventForLog(event));
+    expect(out).not.toContain('203.0.113');
+    expect(out).not.toContain('Mozilla');
+    expect(out).not.toContain('Firefox');
+    expect(out).not.toContain('visitor@example.com');
+    expect(summariseEventForLog(event)).toMatchObject({ method: 'POST', path: '/chat' });
   });
 });

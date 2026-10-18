@@ -11,7 +11,7 @@ import { checkRateLimit } from './rate-limiter';
 import { fetchGitHubRepos } from './github';
 import { buildSystemPrompt } from './system-prompt';
 import { TOOLS } from './tools';
-import { buildLogEntry, writeLogEntry } from './chat-logger';
+import { buildLogEntry, writeLogEntry, summariseEventForLog } from './chat-logger';
 import { runOnTopicGate } from './relevance/gate';
 
 class LoggingCallbackHandler extends BaseCallbackHandler {
@@ -87,7 +87,7 @@ export const handler = async (event: {
   headers: Record<string, string>;
   body: string;
 }> => {
-  console.log('Chat handler invoked with event:', JSON.stringify(event, null, 2));
+  console.log('Chat handler invoked with event:', JSON.stringify(summariseEventForLog(event)));
   const headers = { 'Content-Type': 'application/json' };
 
   try {
@@ -151,7 +151,7 @@ export const handler = async (event: {
 
     // --- Email submission path ---
     if (body.emailAddress) {
-      console.log('Email submission path - email:', body.emailAddress);
+      console.log('Email submission path');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.emailAddress)) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid email address' }) };
       }
