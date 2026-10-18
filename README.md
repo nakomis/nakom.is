@@ -44,7 +44,7 @@ The [Route53](lib/route53-stack.ts) stack is used to create the Route53 hosted z
 
 In addition, I had several existing records for MX records and various other projects. I wanted to maintain these records, so I wrote the [utils/getroute53.is](utils/getroute53.is) script to download the records to [JSON files](https://github.com/nakomis/nakom.is/tree/main/route53). The Route53 stack then [parses](lib/route53-stack.ts#L39-L89) these records and adds them to the new hosted zone.
 
-For which hosted zones exist (including the sandbox zones), which repository and stack owns each zone and record, how delegation works and the rule for adding a new record, see [DNS zone ownership](docs/dns-zones.md).
+For which hosted zones exist (including the sandbox zones), which repository and stack owns each zone and record, how delegation works and the rule for adding a new record, see [DNS zone ownership](docs/dns-zones.md). If delegation breaks, follow the [DNS zone restoration runbook](docs/runbooks/dns-zone-restoration.md).
 
 ### Cloudfront
 
