@@ -85,6 +85,9 @@ No NS records are written by either repository. Delegation is entirely manual:
   legacy record files, so Route53's own apex NS/SOA records are left alone.
 - **Prod zones to sandbox zones.** Not in code; see [To confirm](#to-confirm-with-martin) item 2.
 
+To check or restore either level of delegation, follow the
+[DNS zone restoration runbook](runbooks/dns-zone-restoration.md).
+
 ```
 ISNIC (.is registry) ──NS──▶ nakom.is            (prod, nakom.is Route53Stack)
                                 └─(not in code)─▶ sandbox.nakom.is     (sandbox, pre-existing)
