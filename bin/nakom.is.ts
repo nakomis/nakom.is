@@ -16,6 +16,7 @@ import { CvStack } from '../lib/cv-stack';
 import { LinkedInStack } from '../lib/linkedin-stack';
 import { DeployEnv } from '../lib/deploy-env';
 import { GithubCiStack } from '../lib/github-ci-stack';
+import { MonitoringStack } from '../lib/monitoring-stack';
 
 const npmEnvironment = process.env.NPM_ENVIRONMENT;
 if (!npmEnvironment) throw new Error('NPM_ENVIRONMENT is not set. Use NPM_ENVIRONMENT=sandbox|prod');
@@ -123,6 +124,13 @@ new GithubCiStack(app, 'GithubCiStack', {
     description: 'IAM role assumed by nakom.is GitHub Actions via OIDC to run CDK deploys.',
     deployEnv,
     githubOidcProviderArn: `arn:aws:iam::${accountId}:oidc-provider/token.actions.githubusercontent.com`,
+});
+
+// Last: addresses everything by name, so it has no cross-stack references.
+new MonitoringStack(app, 'MonitoringStack', {
+    ...londonEnv,
+    description: 'CloudWatch health dashboard: API Gateway requests and error rates, Lambda duration and errors, CloudFront cache hit rate.',
+    deployEnv,
 });
 
 cdk.Tags.of(app).add("MH-Project", "nakom.is");

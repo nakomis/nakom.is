@@ -20,8 +20,9 @@ AWS_PROFILE=nakom.is-admin cdk deploy StackName
 
 ### Deploy order (when deploying everything from scratch)
 ```
-Route53Stack → CertificateStack → SESStack → ChatStack → S3Stack → LambdaStack → ApiGatewayStack → CloudfrontStack → Route53AdditionalStack
+Route53Stack → CertificateStack → SESStack → ChatStack → S3Stack → LambdaStack → ApiGatewayStack → CloudfrontStack → Route53AdditionalStack → MonitoringStack
 ```
+`MonitoringStack` holds the `nakomis-health` dashboard (`nakomis-health-sandbox` in sandbox). It finds the API and Lambdas by name, so it has no cross-stack references; the CloudFront cache hit rate widget needs the monitoring subscription `CloudfrontStack` creates in prod only, so it stays empty in sandbox.
 For chat-only changes: `SESStack → ChatStack`, then `social-app/scripts/deploy.sh` for the React app.
 
 ## Architecture overview

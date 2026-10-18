@@ -146,3 +146,18 @@ describe('CloudFront hi-* behaviour', () => {
         });
     });
 });
+
+// CacheHitRate needs CloudFront additional metrics (NAKIS-21), which cost money, so prod only.
+describe('CloudFront monitoring subscription', () => {
+    it('enables additional metrics in prod', () => {
+        synth('prod').hasResourceProperties('AWS::CloudFront::MonitoringSubscription', {
+            MonitoringSubscription: {
+                RealtimeMetricsSubscriptionConfig: { RealtimeMetricsSubscriptionStatus: 'Enabled' },
+            },
+        });
+    });
+
+    it('leaves additional metrics off in sandbox', () => {
+        synth('sandbox').resourceCountIs('AWS::CloudFront::MonitoringSubscription', 0);
+    });
+});

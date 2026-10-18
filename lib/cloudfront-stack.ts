@@ -255,6 +255,20 @@ function handler(event) {
             certificate: props!.certificate,
         });
 
+        // CloudFront additional metrics (NAKIS-21): CacheHitRate and friends only
+        // exist with a monitoring subscription, which carries a small monthly charge,
+        // so it is prod only. MonitoringStack graphs CacheHitRate.
+        if (isProd) {
+            new cloudfront.CfnMonitoringSubscription(this, 'MonitoringSubscription', {
+                distributionId: this.distrubution.distributionId,
+                monitoringSubscription: {
+                    realtimeMetricsSubscriptionConfig: {
+                        realtimeMetricsSubscriptionStatus: 'Enabled',
+                    },
+                },
+            });
+        }
+
         // Route53 A record for cv subdomain → this CloudFront distribution
         const cvZone = route53.HostedZone.fromLookup(this, 'CvZone', {
             domainName: cvZoneDomain,
