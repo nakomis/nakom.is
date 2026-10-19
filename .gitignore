@@ -27,6 +27,7 @@ social-app/dist
 social-app/node_modules
 s3contents/social-app
 
+
 # Lambda chat dependencies
 lambda/chat/node_modules
 .worktrees/
@@ -34,3 +35,4 @@ config.json
 
 # Plan files
 PLAN.md
+s3contents/social.html
