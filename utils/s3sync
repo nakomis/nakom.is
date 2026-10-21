@@ -1,5 +1,8 @@
 #!/bin/bash
 AWS_PROFILE=nakom.is
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-aws s3 sync --exclude ".DS_Store" $SCRIPT_DIR/../s3contents s3://nakom.is-static
-aws s3 sync s3://nakom.is-static $SCRIPT_DIR/../s3contents
+# social.html and social-app/ are the React SPA, deployed by social-app/scripts/deploy.sh.
+# Never sync them: an old local copy would overwrite the live app (as on 14 Sep 2026).
+EXCLUDES=(--exclude ".DS_Store" --exclude "social.html" --exclude "social-app/*")
+aws s3 sync "${EXCLUDES[@]}" $SCRIPT_DIR/../s3contents s3://nakom.is-static
+aws s3 sync "${EXCLUDES[@]}" s3://nakom.is-static $SCRIPT_DIR/../s3contents
