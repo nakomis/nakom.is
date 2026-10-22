@@ -90,7 +90,7 @@ describe('buildHitEvent', () => {
     it('clips oversized header values', () => {
         const hit = buildHitEvent('hi-x', 'qr', {
             headers: { 'CloudFront-Viewer-City': 'x'.repeat(500), 'CloudFront-Viewer-Country': 'GBGBGBGBGB' },
-            requestId: 'r',
+            requestId: 'r', query: '',
         }, new Date('2026-10-15T22:00:00Z'));
         expect(hit.city).toHaveLength(100);
         expect(hit.country).toHaveLength(8);
@@ -102,7 +102,7 @@ describe('sqsHitSink', () => {
     it('sends the event as the message body', async () => {
         jest.spyOn(console, 'log').mockImplementation(() => undefined);
         const send = jest.fn().mockResolvedValue({});
-        const hit = buildHitEvent('hi-x', 'link', { headers: {}, requestId: 'r1' });
+        const hit = buildHitEvent('hi-x', 'link', { headers: {}, requestId: 'r1', query: '' });
         await sqsHitSink({ send }, 'https://sqs.example/q')(hit);
         expect(send).toHaveBeenCalledTimes(1);
         const [command, options] = send.mock.calls[0];

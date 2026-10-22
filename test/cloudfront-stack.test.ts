@@ -142,7 +142,9 @@ describe('CloudFront hi-* behaviour', () => {
             const [distribution] = Object.values(template.findResources('AWS::CloudFront::Distribution')) as any[];
             const def = distribution.Properties.DistributionConfig.DefaultCacheBehavior;
             expect(def.OriginRequestPolicyId).toBeUndefined();
-            expect(def.CachePolicyId).toBe('658327ea-f89d-4fab-a63d-7e88639e58f6');
+            // No longer the managed CachingOptimized id: a custom policy that also keys on query strings (HOME-529)
+            expect(def.CachePolicyId).toBeDefined();
+            expect(def.CachePolicyId).not.toBe('658327ea-f89d-4fab-a63d-7e88639e58f6');
         });
     });
 });
@@ -159,5 +161,18 @@ describe('CloudFront monitoring subscription', () => {
 
     it('leaves additional metrics off in sandbox', () => {
         synth('sandbox').resourceCountIs('AWS::CloudFront::MonitoringSubscription', 0);
+    });
+});
+
+describe('default behaviour query strings (HOME-529)', () => {
+    it.each(['prod', 'sandbox'] as DeployEnv[])('%s keys the cache on all query strings', (env) => {
+        const template = synth(env);
+        template.hasResourceProperties('AWS::CloudFront::CachePolicy', {
+            CachePolicyConfig: Match.objectLike({
+                ParametersInCacheKeyAndForwardedToOrigin: Match.objectLike({
+                    QueryStringsConfig: { QueryStringBehavior: 'all' },
+                }),
+            }),
+        });
     });
 });

@@ -1,21 +1,42 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-    echo 
-    echo Usage: nis shortUrl longUrl
-    echo For auto-generation of shortUrl: nis longUrl
+usage() {
     echo
+    echo Usage: nis [--passthrough] shortUrl longUrl
+    echo For auto-generation of shortUrl: nis [--passthrough] longUrl
+    echo
+    echo "  --passthrough  pass the incoming query string on to longUrl"
+    echo "                 (longUrl's own parameters win on a clash)"
+    echo
+    echo Examples:
+    echo "  nis blog https://blog.nakomis.com"
+    echo "  nis --passthrough alifinder http://127.0.0.1:8765/aliexpress/callback"
+    echo
+}
+
+passthrough=false
+args=()
+for arg in "$@"; do
+    case "$arg" in
+        --passthrough) passthrough=true ;;
+        -h|--help) usage; exit 0 ;;
+        *) args+=("$arg") ;;
+    esac
+done
+
+if [ -z "${args[0]}" ]; then
+    usage
     exit 0
 fi
 
-if [ -z "$2" ]; then
+if [ -z "${args[1]}" ]; then
     echo generating random short url...
     shortUrl=$(head -c 6 /dev/urandom | base64 | head -c 6)
     # shortUrl=$(uuidgen | base64 | head -c 6)
-    longUrl=$1
+    longUrl=${args[0]}
 else
-    shortUrl=$1
-    longUrl=$2
+    shortUrl=${args[0]}
+    longUrl=${args[1]}
 fi
 
 . $(dirname "$0")/nis.env
@@ -28,7 +49,12 @@ unset AWS_PROFILE
 unset AWS_SESSION_TOKEN
 unset AWS_SECURITY_TOKEN
 
-aws dynamodb put-item --table-name redirects --item '{"shortPath": {"S": "'$shortUrl'"}, "hitCount": {"N": "0"}, "url": {"S": "'$longUrl'"}}' --region eu-west-2
+extra=
+if [ "$passthrough" = true ]; then
+    extra=', "passthrough": {"BOOL": true}'
+fi
+
+aws dynamodb put-item --table-name redirects --item '{"shortPath": {"S": "'$shortUrl'"}, "hitCount": {"N": "0"}, "url": {"S": "'$longUrl'"}'"$extra"'}' --region eu-west-2
 
 echo https://nakom.is/$shortUrl
 echo https://nakom.is/$shortUrl | pbcopy
