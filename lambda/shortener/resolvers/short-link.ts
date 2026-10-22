@@ -1,6 +1,6 @@
 import { ConditionalCheckFailedException, DynamoDBClient, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
 import { buildHitEvent, HIT_PREFIX, HitSink, HitSource, QR_CODE } from '../hits';
-import { redirect, Resolver } from '../resolver';
+import { redirect, Resolver, withQuery } from '../resolver';
 
 export type DynamoSender = Pick<DynamoDBClient, 'send'>;
 
@@ -54,6 +54,7 @@ export function shortLinkResolver(client: DynamoSender, tableName: string, hits?
         match: matchShortLink,
         resolve: async ({ shortPath: path, source }, request) => {
             let url: string | undefined;
+            let passthrough = false;
             try {
                 const result = await client.send(new UpdateItemCommand({
                     TableName: tableName,
@@ -64,6 +65,7 @@ export function shortLinkResolver(client: DynamoSender, tableName: string, hits?
                     ReturnValues: 'ALL_NEW',
                 }));
                 url = result.Attributes?.url?.S;
+                passthrough = result.Attributes?.passthrough?.BOOL === true;
             } catch (err) {
                 if (err instanceof ConditionalCheckFailedException) {
                     return null;
@@ -76,6 +78,11 @@ export function shortLinkResolver(client: DynamoSender, tableName: string, hits?
             }
             if (!url.startsWith('http') && !url.startsWith('chrome://')) {
                 url = `https://${url}`;
+            }
+            // Opt-in per link (`passthrough` BOOL on the item, set by `nis --passthrough`):
+            // the query is merged into the target, never logged (it may hold an OAuth code).
+            if (passthrough) {
+                url = withQuery(url, request.query);
             }
             console.log(`Redirecting: ${path}`);
             if (!source) {

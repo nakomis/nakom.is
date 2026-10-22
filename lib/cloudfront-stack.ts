@@ -109,6 +109,17 @@ function handler(event) {
             runtime: cloudfront.FunctionRuntime.JS_2_0,
         });
 
+        const queryStringCachePolicy = new cloudfront.CachePolicy(this, 'QueryStringCachePolicy', {
+            cachePolicyName: `nakomis-caching-optimized-query${suffix}`,
+            comment: 'CachingOptimized, with all query strings in the cache key (HOME-529)',
+            defaultTtl: cdk.Duration.days(1),
+            minTtl: cdk.Duration.seconds(1),
+            maxTtl: cdk.Duration.days(365),
+            enableAcceptEncodingGzip: true,
+            enableAcceptEncodingBrotli: true,
+            queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+        });
+
         const additionalBehaviors: Record<string, cloudfront.BehaviorOptions> = {
             'chat': {
                 origin: apiOrigin,
@@ -242,6 +253,11 @@ function handler(event) {
             defaultBehavior: {
                 origin: apiOrigin,
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                // CachingOptimized plus every query string, which both reaches the
+                // Lambda and is part of the cache key, so a cached redirect for
+                // ?code=A is never served for ?code=B (HOME-529). Only links with
+                // `passthrough` set use the query; the rest ignore it.
+                cachePolicy: queryStringCachePolicy,
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                 functionAssociations: [
                     {

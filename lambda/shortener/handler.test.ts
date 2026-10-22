@@ -1,5 +1,6 @@
 import { ConditionalCheckFailedException, UpdateItemCommand } from '@aws-sdk/client-dynamodb';
-import { handle } from './handler';
+import { handle, queryOf } from './handler';
+import { withQuery } from './resolver';
 import { HitSink, sqsHitSink } from './hits';
 import { AnyResolver } from './resolver';
 import { catResolver } from './resolvers/cat';
@@ -8,7 +9,7 @@ import { imdbResolver } from './resolvers/imdb';
 import { DynamoSender, matchShortLink, shortLinkResolver } from './resolvers/short-link';
 import { ticketResolver } from './resolvers/tickets';
 
-function fakeTable(links: Record<string, string>) {
+function fakeTable(links: Record<string, string>, passthrough: Record<string, boolean> = {}) {
     const commands: UpdateItemCommand[] = [];
     const client = {
         send: jest.fn(async (command: UpdateItemCommand) => {
@@ -17,14 +18,14 @@ function fakeTable(links: Record<string, string>) {
             if (!(key in links)) {
                 throw new ConditionalCheckFailedException({ message: 'The conditional request failed', $metadata: {} });
             }
-            return { Attributes: { shortPath: { S: key }, url: { S: links[key] }, hitCount: { N: '1' } } };
+            return { Attributes: { shortPath: { S: key }, url: { S: links[key] }, ...(key in passthrough ? { passthrough: { BOOL: passthrough[key] } } : {}), hitCount: { N: '1' } } };
         }),
     } as unknown as DynamoSender;
     return { client, commands };
 }
 
-function chainWith(links: Record<string, string>) {
-    const table = fakeTable(links);
+function chainWith(links: Record<string, string>, passthrough: Record<string, boolean> = {}) {
+    const table = fakeTable(links, passthrough);
     const chain: AnyResolver[] = [catResolver, shortLinkResolver(table.client, 'redirects'), googleResolver];
     return { chain, ...table };
 }
@@ -295,5 +296,69 @@ describe('hi- links', () => {
             expect(ticketResolver({ send: jest.fn() } as any, 't').match(path)).toBeNull();
             expect(catResolver.match(path)).toBeNull();
         }
+    });
+});
+
+// HOME-529: per-link opt-in query-string passthrough
+describe('query-string passthrough', () => {
+    const cb = 'http://127.0.0.1:8765/aliexpress/callback';
+    const withQ = (shortPath: string, multi: Record<string, string[]>) =>
+        ({ pathParameters: { shortPath }, multiValueQueryStringParameters: multi });
+
+    test('passthrough on: the query is appended', async () => {
+        const { chain } = chainWith({ alifinder: cb }, { alifinder: true });
+        await expect(handle(withQ('alifinder', { code: ['test'], x: ['1'] }), chain)).resolves.toEqual({
+            statusCode: 301,
+            headers: { Location: `${cb}?code=test&x=1`, 'Cache-Control': 'max-age=600' },
+        });
+    });
+
+    test('passthrough on: merged with the target query, target wins on a clash', async () => {
+        const { chain } = chainWith({ l: 'https://e.com/p?a=1&b=2#frag' }, { l: true });
+        await expect(handle(withQ('l', { b: ['9'], c: ['3'] }), chain)).resolves.toMatchObject({
+            headers: { Location: 'https://e.com/p?a=1&b=2&c=3#frag' },
+        });
+    });
+
+    test('passthrough on: no incoming query leaves the target alone', async () => {
+        const { chain } = chainWith({ l: 'https://e.com/p?a=1' }, { l: true });
+        await expect(handle({ pathParameters: { shortPath: 'l' } }, chain)).resolves.toMatchObject({
+            headers: { Location: 'https://e.com/p?a=1' },
+        });
+    });
+
+    test.each([
+        ['false', { alifinder: false }],
+        ['missing', {}],
+    ])('passthrough %s: the query is dropped', async (_name, flags) => {
+        const { chain } = chainWith({ alifinder: cb }, flags);
+        await expect(handle(withQ('alifinder', { code: ['test'] }), chain)).resolves.toMatchObject({
+            headers: { Location: cb },
+        });
+    });
+
+    test('other resolvers ignore the query', async () => {
+        const { chain } = chainWith({}, {});
+        await expect(handle(withQ('some words', { code: ['x'] }), chain)).resolves.toMatchObject({
+            headers: { Location: 'https://www.google.co.uk/search?q=some%20words' },
+        });
+    });
+
+    test('the query is never logged', async () => {
+        const log = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        const { chain } = chainWith({ alifinder: cb }, { alifinder: true });
+        await handle(withQ('alifinder', { code: ['SECRET'] }), chain);
+        expect(JSON.stringify(log.mock.calls)).not.toContain('SECRET');
+        log.mockRestore();
+    });
+
+    test('queryOf re-encodes values and keeps repeated keys', () => {
+        expect(queryOf({ multiValueQueryStringParameters: { a: ['b c', 'd&e'], 'k y': ['1'] } })).toBe('a=b%20c&a=d%26e&k%20y=1');
+        expect(queryOf({ queryStringParameters: { a: '1' } })).toBe('a=1');
+        expect(queryOf({})).toBe('');
+    });
+
+    test('withQuery compares keys after decoding and preserves encoding', () => {
+        expect(withQuery('https://e.com/?a%20b=1', 'a+b=2&c=%2F')).toBe('https://e.com/?a%20b=1&c=%2F');
     });
 });

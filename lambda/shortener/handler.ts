@@ -13,6 +13,8 @@ export interface ShortenerEvent {
     pathParameters?: { shortPath?: string } | null;
     headers?: Record<string, string | undefined> | null;
     requestContext?: { requestId?: string } | null;
+    queryStringParameters?: Record<string, string | undefined> | null;
+    multiValueQueryStringParameters?: Record<string, (string | undefined)[] | undefined> | null;
 }
 
 const client = new DynamoDBClient({});
@@ -43,11 +45,24 @@ function decodePath(raw: string): string {
     }
 }
 
+// API Gateway's REST proxy event has no raw query string, only decoded
+// parameters, so rebuild a percent-encoded one (repeated keys kept in order).
+export function queryOf(event: ShortenerEvent): string {
+    const multi = event.multiValueQueryStringParameters;
+    const entries: [string, string | undefined][] = multi
+        ? Object.entries(multi).flatMap(([k, vs]) => (vs ?? []).map((v): [string, string | undefined] => [k, v]))
+        : Object.entries(event.queryStringParameters ?? {});
+    return entries
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v ?? '')}`)
+        .join('&');
+}
+
 export async function handle(event: ShortenerEvent, chain: AnyResolver[]): Promise<RedirectResponse> {
     const path = decodePath(event.pathParameters?.shortPath ?? '');
     const request: ShortenerRequest = {
         headers: event.headers ?? {},
         requestId: event.requestContext?.requestId ?? randomUUID(),
+        query: queryOf(event),
     };
     return runChain(path, chain, request);
 }

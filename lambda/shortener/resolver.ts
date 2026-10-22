@@ -15,9 +15,43 @@ export interface ShortenerRequest {
     headers: Record<string, string | undefined>;
     /** API Gateway's request id, or a random UUID when there isn't one. */
     requestId: string;
+    /** The incoming query string, percent-encoded, without the leading `?`. Empty when there is none. */
+    query: string;
 }
 
-export const emptyRequest = (): ShortenerRequest => ({ headers: {}, requestId: randomUUID() });
+export const emptyRequest = (): ShortenerRequest => ({ headers: {}, requestId: randomUUID(), query: '' });
+
+function paramKey(pair: string): string {
+    const raw = pair.split('=', 1)[0].replace(/\+/g, ' ');
+    try {
+        return decodeURIComponent(raw);
+    } catch {
+        return raw;
+    }
+}
+
+/**
+ * Appends the incoming query string to a redirect target (HOME-529), so that
+ * e.g. an OAuth `?code=…` survives the hop. If the target already has a query
+ * the two are merged and the target's own parameters win on a clash. Pairs are
+ * kept as written (no re-encoding), and any `#fragment` stays at the end.
+ */
+export function withQuery(target: string, query: string): string {
+    if (!query) {
+        return target;
+    }
+    const hash = target.indexOf('#');
+    const fragment = hash === -1 ? '' : target.slice(hash);
+    const beforeFragment = hash === -1 ? target : target.slice(0, hash);
+    const q = beforeFragment.indexOf('?');
+    const base = q === -1 ? beforeFragment : beforeFragment.slice(0, q);
+    const own = q === -1 ? '' : beforeFragment.slice(q + 1);
+    const ownPairs = own.split('&').filter((pair) => pair !== '');
+    const taken = new Set(ownPairs.map(paramKey));
+    const added = query.split('&').filter((pair) => pair !== '' && !taken.has(paramKey(pair)));
+    const merged = [...ownPairs, ...added].join('&');
+    return `${base}${merged ? `?${merged}` : ''}${fragment}`;
+}
 
 /**
  * A resolver turns a request path into a response.
